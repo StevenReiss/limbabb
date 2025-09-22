@@ -1,0 +1,26 @@
+<project name='faitbb' default='all' >
+
+   <property file='../build.properties' />
+   <property name='PRO' value='/research' />
+   <property name='IVYBIN' value='${PRO}/ivy/java' />
+   <property name='LIMBA' value='${PRO}/fait' />
+
+   <target name='all'>
+      <ant antfile="build.xml" dir="edu/brown/cs/limbabb/bait" />
+   </target>
+
+   <path id='jdocsrc'>
+      <pathelement location='${LIMBA}/java' />
+      <pathelement location='${IVYBIN}' />
+      <fileset dir='${LIMBA}/lib/' includes='asm*.jar' />
+   </path>
+
+   <target name='doc'>
+      <javadoc sourcepathref='jdocsrc' classpathref='bubbles.classpath' destdir='${PRO}/bubbles/doc'>
+	 <package name='edu.brown.cs.faitbb.bsean' />
+      </javadoc>
+   </target>
+
+
+</project>
+
