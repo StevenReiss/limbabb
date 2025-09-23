@@ -32,8 +32,8 @@ import edu.brown.cs.bubbles.board.BoardConstants.BoardPluginFilter;
 import edu.brown.cs.bubbles.board.BoardConstants.RunMode;
 import edu.brown.cs.bubbles.buda.BudaBubbleArea;
 import edu.brown.cs.bubbles.buda.BudaConstants;
-import edu.brown.cs.bubbles.bump.BumpClient;
 import edu.brown.cs.bubbles.buda.BudaRoot;
+import edu.brown.cs.bubbles.buda.BudaConstants.BudaBubblePosition;
 import edu.brown.cs.ivy.exec.IvyExec;
 import edu.brown.cs.ivy.exec.IvyExecQuery;
 import edu.brown.cs.ivy.file.IvyFile;
@@ -74,7 +74,6 @@ public final class BaitFactory implements BaitConstants, MintConstants
 
 private boolean server_running;
 private boolean server_started;
-private boolean auto_start;
 private Map<String,ResponseHandler> hdlr_map;
 
 private static BaitFactory the_factory = new BaitFactory();
@@ -107,7 +106,7 @@ private static final class ResourceFilter implements BoardPluginFilter {
 
 public static void initialize(BudaRoot br)
 {
-   if (!BumpClient.getBump().getOptionBool("bubbles.useLimba")) return;
+// if (!BumpClient.getBump().getOptionBool("bubbles.useLimba")) return;
 
    BoardLog.logD("BAIT","USING LIMBA");
 
@@ -120,7 +119,6 @@ public static void initialize(BudaRoot br)
 	 break;
     }
 
-   getFactory().auto_start = true;
    BaitStarter bs = new BaitStarter(br);
    bs.start();
 }
@@ -152,12 +150,12 @@ private BaitFactory()
 {
    server_running = false;
    server_started = false;
-   auto_start = false;
    hdlr_map = new HashMap<>();
 
    BoardSetup bs = BoardSetup.getSetup();
    MintControl mc = bs.getMintControl();
-   mc.register("<LIMBA RID='_VAR_0' />",new LimbaHandler());
+   mc.register("<LIMBAREPLY RID='_VAR_0' />",new LimbaHandler());
+   mc.register("<LIMBAREPLY DO='PING' />",new PingHandler());
 
    switch (BoardSetup.getSetup().getRunMode()) {
       case NORMAL :
@@ -186,7 +184,9 @@ private void start()
 
 
 
+//CHECKSTYLE:OFF
 private boolean startLimba()
+// CHECKSTYLE:ON
 {
    BoardSetup bs = BoardSetup.getSetup();
    MintControl mc = bs.getMintControl();
@@ -203,8 +203,9 @@ private boolean startLimba()
        }
     }
    
-   
    if (server_running || server_started) return false;
+   
+   BoardLog.logD("BAIT","Starting limba server");
    
    IvyExec exec = null;
    File wd =  new File(bs.getDefaultWorkspace());
@@ -296,8 +297,8 @@ private boolean startLimba()
       args.add("-port");
       args.add(Integer.toString(op));
     }
-   String mdl = bp.getString("Bait.ollama.model");
-   if (mdl != null) {
+   String mdl = bp.getString("Bait.ollama.model",null);
+   if (mdl != null && !mdl.isEmpty()) {
       args.add("-llama");
       args.add(mdl);
     }
@@ -306,23 +307,23 @@ private boolean startLimba()
     }
             
    synchronized (this) {
-      if (server_started || server_running) return false;
+      if (server_started || server_running) return false; 
       server_started = true;
     }
    
-   boolean isnew = false;
    for (int i = 0; i < 100; ++i) {
       MintDefaultReply rply = new MintDefaultReply();
       mc.send("<LIMBA DO='PING' />",rply,MINT_MSG_FIRST_NON_NULL);
       String rslt = rply.waitForString(1000);
+      BoardLog.logD("BAIT","Limba ping response " + rslt);
       if (rslt != null) {
 	 server_running = true;
 	 break;
        }
       if (i == 0) {
 	 try {
-	    exec = new IvyExec(args,null,IvyExec.ERROR_OUTPUT);     // make IGNORE_OUTPUT to clean up otuput
-	    isnew = true;
+            // make IGNORE_OUTPUT to clean up otuput
+            exec = new IvyExec(args,null,IvyExec.ERROR_OUTPUT);    
 	    BoardLog.logD("BAIT","Run " + exec.getCommand());
 	  }
 	 catch (IOException e) {
@@ -393,12 +394,12 @@ void issueCommand(String cmd,String body,ResponseHandler hdlr)
    hdlr_map.put(rid,hdlr);
    CommandArgs args = new CommandArgs("RID",rid);
    IvyXmlWriter xw = new IvyXmlWriter();
-   xw.cdata(body);
+   xw.cdataElement("BODY",body);
    Element xml = sendLimbaMessage(cmd,args,xw.toString());
    xw.close();
    String nrid = IvyXml.getAttrString(xml,"RID");
    if (!rid.equals(nrid)) {
-      BoardLog.logE("BAIT","Reply ids don't match");
+      BoardLog.logE("BAIT","Reply ids don't match " + rid + " " + nrid);
     }
    
 }
@@ -476,6 +477,16 @@ private final class LimbaHandler implements MintHandler {
 
 
 
+private final class PingHandler implements MintHandler {
+
+   @Override public void receive(MintMessage msg,MintArguments args) {
+      msg.replyTo("<PONG/>");
+    }
+
+}	// end of inner class UpdateHandler
+
+
+
 /********************************************************************************/
 /*                                                                              */
 /*      Action methods                                                          */
@@ -485,7 +496,9 @@ private final class LimbaHandler implements MintHandler {
 private final class AskLimbaAction implements BudaConstants.ButtonListener {
    
    @Override public void buttonActivated(BudaBubbleArea bba,String id,Point pt) {
-      // create conversational bubble
+      BaitChatBubble bbl = new BaitChatBubble();
+      BoardLog.logD("BAIT","Create chat bubble " + bbl);
+      bba.addBubble(bbl,BudaBubblePosition.USERPOS,pt.x,pt.y);
     }
    
 }       // end of inner class AskLimbaAction

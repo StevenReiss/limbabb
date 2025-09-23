@@ -33,6 +33,8 @@ import javax.swing.JLabel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.text.BadLocationException;
+import javax.swing.text.html.HTMLDocument;
+import javax.swing.text.html.HTMLEditorKit;
 import javax.swing.text.Document;
 
 import org.w3c.dom.Element;
@@ -42,6 +44,7 @@ import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.bubbles.buda.BudaBubble;
 import edu.brown.cs.ivy.swing.SwingGridPanel;
 import edu.brown.cs.ivy.xml.IvyXml;
+import edu.brown.cs.ivy.xml.IvyXmlWriter;
 
 class BaitChatBubble extends BudaBubble implements BaitConstants
 {
@@ -57,6 +60,8 @@ private JButton         settings_button;
 private JButton         submit_button;
 private JEditorPane     input_area;
 private JEditorPane     log_pane;
+
+private static final long serialVersionUID = 1;
 
 
 
@@ -92,6 +97,10 @@ JComponent getChatPanel()
    settings_button.addActionListener(new SettingsAction());
    log_pane = new JEditorPane("text/html","");
    log_pane.setEditable(false);
+   BoardLog.logD("BAIT","Chat panel log pane " + log_pane.getContentType() + " " +
+         log_pane.getEditorKit() + " " +
+         log_pane.getEditorKitForContentType("text/html"));
+   
    JScrollPane outregion = new JScrollPane(log_pane,
          JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
          JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
@@ -124,10 +133,12 @@ JComponent getChatPanel()
 private void appendOutput(String s)
 {
    try {
-      Document doc = log_pane.getDocument();
-      doc.insertString(doc.getLength(),s,null);
+      HTMLEditorKit kit = (HTMLEditorKit) log_pane.getEditorKit();
+      HTMLDocument doc = (HTMLDocument) log_pane.getDocument();
+      kit.insertHTML(doc,doc.getLength(),s,
+            0,0,null);
     }
-   catch (BadLocationException e) { 
+   catch (Exception e) { 
       BoardLog.logE("BAIT","Problem appending output",e);
     }
 }
@@ -139,7 +150,7 @@ private void appendOutput(String s)
 /*                                                                              */
 /********************************************************************************/
 
-private class SettingsAction implements ActionListener {
+private final class SettingsAction implements ActionListener {
    
    @Override public void actionPerformed(ActionEvent evt) {
       
@@ -148,12 +159,12 @@ private class SettingsAction implements ActionListener {
 }       // end of inner class SettingsAction
 
 
-private class SubmitAction implements ActionListener {
+private final class SubmitAction implements ActionListener {
    
    @Override public void actionPerformed(ActionEvent evt) {
       String text = input_area.getText();
       if (text.isBlank()) return;
-      BaitFactory.getFactory().issueCommand("QUERY",text,new Responder()); 
+      BaitFactory.getFactory().issueCommand("QUERY",text,new Responder());  
       String disp = "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" + text + 
             "</font></p></div>";
       appendOutput(disp);
@@ -162,10 +173,11 @@ private class SubmitAction implements ActionListener {
 }       // end of inner class SubmitAction
 
 
-private class Responder implements ResponseHandler {
+private final class Responder implements ResponseHandler {
    
    @Override public void handleResponse(Element xml) { 
-      String text = IvyXml.getTextElement(xml,"RESPONSE");
+      Element rslt = IvyXml.getChild(xml,"RESULT");
+      String text = IvyXml.getTextElement(rslt,"RESPONSE");
       String disp = "<div align='left'><p><font color='black'>" + text +
            "</font></p></div>";
       appendOutput(disp);    
