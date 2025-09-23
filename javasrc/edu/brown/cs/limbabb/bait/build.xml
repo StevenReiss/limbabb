@@ -28,7 +28,6 @@
 		target='10' source='10'
 		includeantruntime='false' excludes='scan/**' >
 	 <classpath refid='limbabb.classpath' />
-	 <compilerarg value='-Xlint:all' />
       </javac>
    </target>
 
