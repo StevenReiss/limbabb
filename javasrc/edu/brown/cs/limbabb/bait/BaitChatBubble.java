@@ -32,10 +32,8 @@ import javax.swing.JEditorPane;
 import javax.swing.JLabel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
-import javax.swing.text.BadLocationException;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.HTMLEditorKit;
-import javax.swing.text.Document;
 
 import org.w3c.dom.Element;
 
@@ -44,7 +42,6 @@ import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.bubbles.buda.BudaBubble;
 import edu.brown.cs.ivy.swing.SwingGridPanel;
 import edu.brown.cs.ivy.xml.IvyXml;
-import edu.brown.cs.ivy.xml.IvyXmlWriter;
 
 class BaitChatBubble extends BudaBubble implements BaitConstants
 {
@@ -130,6 +127,13 @@ JComponent getChatPanel()
 }
 
 
+
+/********************************************************************************/
+/*                                                                              */
+/*      Output methods                                                          */
+/*                                                                              */
+/********************************************************************************/
+
 private void appendOutput(String s)
 {
    try {
@@ -143,6 +147,32 @@ private void appendOutput(String s)
     }
 }
 
+
+private String formatText(String text)
+{
+   String ntext = text;
+   ntext = ntext.replace("<","&lt;");
+   ntext = ntext.replace(">","&gt;");
+   
+   for ( ; ; ) {
+      int idx0 = ntext.indexOf("```");
+      if (idx0 < 0) break;
+      int idx1 = ntext.indexOf("\n",idx0);
+      int idx2 = ntext.indexOf("```",idx1);
+      int idx3 = ntext.length();
+      if (idx2 < 0) {
+         idx2 = ntext.length();
+         idx3 = ntext.indexOf("\n",idx2);
+       }
+      
+      String quote = ntext.substring(idx1,idx2);
+      String pre = ntext.substring(0,idx0);
+      String post = ntext.substring(idx3);
+      ntext = pre + "<pre><code>\n" + quote + "\n" + post;
+    }
+   
+   return ntext;
+}
 
 /********************************************************************************/
 /*                                                                              */
@@ -178,6 +208,7 @@ private final class Responder implements ResponseHandler {
    @Override public void handleResponse(Element xml) { 
       Element rslt = IvyXml.getChild(xml,"RESULT");
       String text = IvyXml.getTextElement(rslt,"RESPONSE");
+      text = formatText(text);
       String disp = "<div align='left'><p><font color='black'>" + text +
            "</font></p></div>";
       appendOutput(disp);    
