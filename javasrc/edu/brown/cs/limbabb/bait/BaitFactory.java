@@ -30,10 +30,13 @@ import edu.brown.cs.bubbles.board.BoardProperties;
 import edu.brown.cs.bubbles.board.BoardSetup;
 import edu.brown.cs.bubbles.board.BoardConstants.BoardPluginFilter;
 import edu.brown.cs.bubbles.board.BoardConstants.RunMode;
+import edu.brown.cs.bubbles.buda.BudaBubble;
 import edu.brown.cs.bubbles.buda.BudaBubbleArea;
 import edu.brown.cs.bubbles.buda.BudaConstants;
 import edu.brown.cs.bubbles.buda.BudaRoot;
 import edu.brown.cs.bubbles.buda.BudaConstants.BudaBubblePosition;
+import edu.brown.cs.bubbles.bump.BumpClient;
+import edu.brown.cs.bubbles.bump.BumpLocation;
 import edu.brown.cs.ivy.exec.IvyExec;
 import edu.brown.cs.ivy.exec.IvyExecQuery;
 import edu.brown.cs.ivy.file.IvyFile;
@@ -447,8 +450,6 @@ Element sendLimbaMessage(String cmd,CommandArgs args,String cnts)
 }
 
 
-
-
 /********************************************************************************/
 /*										*/
 /*	Message handling							*/
@@ -493,6 +494,31 @@ private final class PingHandler implements MintHandler {
 /*                                                                              */
 /********************************************************************************/
 
+private boolean createGenerateBubble(BaleContextConfig cfg,boolean test)
+{
+   String mnm = cfg.getMethodName();
+   if (mnm == null) return false;
+   
+   List<BumpLocation> locs = BumpClient.getBump().findMethod(null,mnm,false);
+   if (locs == null || locs.size() == 0) return false;
+   BumpLocation loc = locs.get(0);
+   
+   BudaBubble bb = new BaitGenerateBubble(loc,cfg.getEditor(),test);
+   
+   BudaBubbleArea bba = BudaRoot.findBudaBubbleArea(cfg.getEditor());
+   if (bba == null) return false;
+   bba.addBubble(bb,cfg.getEditor(),null,
+         BudaConstants.PLACEMENT_PREFER|BudaConstants.PLACEMENT_MOVETO|BudaConstants.PLACEMENT_NEW);
+   
+   return true;
+}
+
+/********************************************************************************/
+/*                                                                              */
+/*      Action classes                                                          */
+/*                                                                              */
+/********************************************************************************/
+
 private final class AskLimbaAction implements BudaConstants.ButtonListener {
    
    @Override public void buttonActivated(BudaBubbleArea bba,String id,Point pt) {
@@ -524,7 +550,7 @@ private class GenerateTestAction extends AbstractAction {
     }
    
    @Override public void actionPerformed(ActionEvent e) {
-      // create test case bubble
+      createGenerateBubble(start_config,true);
     }
    
 }       // end of inner class GenerateTestAction
@@ -541,7 +567,7 @@ private class GenerateAction extends AbstractAction {
     }
    
    @Override public void actionPerformed(ActionEvent e) {
-      // generate code for method using javadoc, etc. as prompt
+      createGenerateBubble(start_config,false);
     }
 
 }       // end of inner class GenerateAction

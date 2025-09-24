@@ -21,14 +21,47 @@
 
 package edu.brown.cs.limbabb.bait;
 
+import java.awt.image.BufferedImage;
+import java.util.List;
+
 import org.w3c.dom.Element;
 
 public interface BaitConstants
 {
 
+enum TestChoice {
+   INPUT_OUTPUT,
+   USER_TEST,
+   TEST_CASES,
+}
+
+enum UserFileType {
+   READ,
+   WRITE, 
+   DIRECTORY
+}
+
 
 interface ResponseHandler {
    void handleResponse(Element xml);
+}
+
+interface BaitGenerateResult {
+   String getResultName();
+   String getCode();
+   String getSource();
+   int getNumLines();
+   int getCodeSize();
+}
+
+interface BaitGenerateInput {
+   BufferedImage getImage();
+}  
+
+interface BaitGenerateRequest {
+   void handleGenerateFailed();
+   void handleGenerateSucceeded(List<BaitGenerateResult> result);
+   void handleGenerateInputs(List<BaitGenerateInput> result);
 }
 
 
