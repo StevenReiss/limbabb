@@ -74,6 +74,7 @@ class BaitGenerateEngine implements BaitConstants
 
 private BumpLocation	bump_location;
 private String		context_file;
+private boolean         context_flag;
 private String          generate_description;
 private List<BattCallTest> test_cases;
 private List<BattTest>	user_tests;
@@ -97,6 +98,7 @@ BaitGenerateEngine(BumpLocation loc)
    user_tests = null;
    test_code = null;
    data_files = null;
+   context_flag = false;
 }
 
 
@@ -127,6 +129,8 @@ void setDataFiles(Collection<BaitUserFile> fl)
 /*	Context methods 							*/
 /*										*/
 /********************************************************************************/
+
+void setContextFlag(boolean fg)                 { context_flag = fg; }
 
 void createSearchContext()
 {
@@ -250,6 +254,8 @@ private String createGenerateRequest()
    xw.begin("SEARCH");
    xw.field("WHAT","METHOD");
    xw.field("NAME",methodname);
+   xw.field("LANGUAGE","JAVA");
+   xw.field("USECONTEXT",context_flag);
    xw.textElement("SIGNATURE",msgn);
    xw.cdataElement("DESCRIPTION",generate_description);
    
@@ -406,13 +412,7 @@ private String checkSignature()
 
 
 
-private Element issueLimbaCommand(String cnts)
-{
-   BoardLog.logD("BAIT","SEND TO LIMBA " + cnts);
-   
-   
-   return null;
-}
+
 
 
 /********************************************************************************/
@@ -425,7 +425,6 @@ private void addContextFile(JarOutputStream jst) throws IOException
 {
    ZipEntry ze = new ZipEntry("S6.CONTEXT");
    jst.putNextEntry(ze);
-   
    
    IvyXmlWriter xw = new IvyXmlWriter(jst);
    xw.begin("CONTEXT");

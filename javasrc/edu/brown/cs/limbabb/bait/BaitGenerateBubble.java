@@ -321,10 +321,15 @@ private void doGenerate()
    BoardLog.logD("BAIT","GENERATE CODE USING LIMBA");
    
    BaitGenerateEngine eng = new BaitGenerateEngine(bump_location);
-   if (context_field.isSelected() || test_type == TestChoice.TEST_CASES) {
+   boolean needctx = false;
+   if (test_type == TestChoice.TEST_CASES) needctx = true;
+   if (test_type != null && context_field.isSelected()) needctx = true;
+   if (data_files.getSize() > 0) needctx = true;
+   if (needctx) {
       eng.setDataFiles(data_files.getElements());
       eng.createSearchContext();
     }
+   eng.setContextFlag(context_field.isSelected());
    
    eng.setDescription(prompt_field.getText()); 
    if (test_type != null) {
