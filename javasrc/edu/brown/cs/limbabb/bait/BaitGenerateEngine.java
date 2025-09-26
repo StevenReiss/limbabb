@@ -1,21 +1,21 @@
 /********************************************************************************/
-/*                                                                              */
-/*              BaitGenerateEngine.java                                         */
-/*                                                                              */
-/*      Handle setup with test cases, etc. for calling LIMBA                                                   */
-/*                                                                              */
+/*										*/
+/*		BaitGenerateEngine.java 					*/
+/*										*/
+/*	Handle setup with test cases, etc. for calling LIMBA						       */
+/*										*/
 /********************************************************************************/
-/*      Copyright 2011 Brown University -- Steven P. Reiss                    */
+/*	Copyright 2011 Brown University -- Steven P. Reiss		      */
 /*********************************************************************************
- *  Copyright 2011, Brown University, Providence, RI.                            *
- *                                                                               *
- *                        All Rights Reserved                                    *
- *                                                                               *
- * This program and the accompanying materials are made available under the      *
+ *  Copyright 2011, Brown University, Providence, RI.				 *
+ *										 *
+ *			  All Rights Reserved					 *
+ *										 *
+ * This program and the accompanying materials are made available under the	 *
  * terms of the Eclipse Public License v1.0 which accompanies this distribution, *
- * and is available at                                                           *
- *      http://www.eclipse.org/legal/epl-v10.html                                *
- *                                                                               *
+ * and is available at								 *
+ *	http://www.eclipse.org/legal/epl-v10.html				 *
+ *										 *
  ********************************************************************************/
 
 
@@ -67,15 +67,15 @@ class BaitGenerateEngine implements BaitConstants
 
 
 /********************************************************************************/
-/*                                                                              */
-/*      Private Storage                                                         */
-/*                                                                              */
+/*										*/
+/*	Private Storage 							*/
+/*										*/
 /********************************************************************************/
 
 private BumpLocation	bump_location;
 private String		context_file;
-private boolean         context_flag;
-private String          generate_description;
+private boolean 	context_flag;
+private String		generate_description;
 private List<BattCallTest> test_cases;
 private List<BattTest>	user_tests;
 private List<BaitUserFile> data_files;
@@ -84,9 +84,9 @@ private String		test_code;
 
 
 /********************************************************************************/
-/*                                                                              */
-/*      Constructors                                                            */
-/*                                                                              */
+/*										*/
+/*	Constructors								*/
+/*										*/
 /********************************************************************************/
 
 BaitGenerateEngine(BumpLocation loc)
@@ -108,7 +108,7 @@ BaitGenerateEngine(BumpLocation loc)
 /*										*/
 /********************************************************************************/
 
-void setDescription(String d)		        { generate_description = d; }
+void setDescription(String d)			{ generate_description = d; }
 
 void setTestCases(List<BattCallTest> t) 	{ test_cases = t; }
 
@@ -116,9 +116,9 @@ void setTestCode(String cd)			{ test_code = cd; }
 
 void setUserTest(List<BattTest> t)		{ user_tests = t; }
 
-void setDataFiles(Collection<BaitUserFile> fl)		
-{ 
-   data_files = new ArrayList<BaitUserFile>(fl); 
+void setDataFiles(Collection<BaitUserFile> fl)
+{
+   data_files = new ArrayList<BaitUserFile>(fl);
 }
 
 
@@ -130,72 +130,73 @@ void setDataFiles(Collection<BaitUserFile> fl)
 /*										*/
 /********************************************************************************/
 
-void setContextFlag(boolean fg)                 { context_flag = fg; }
+void setContextFlag(boolean fg) 		{ context_flag = fg; }
 
 void createSearchContext()
 {
    BoardLog.logD("BAIT","Creating context");
-   
+
    Element e = BumpClient.getBump().getProjectData(bump_location.getProject(),
-         false,true,false,false,false);
+	 false,true,false,false,false);
    if (e == null) {
       BoardLog.logD("BAIT","No project data available for context for " + bump_location.getProject());
       return;
     }
-   
+
    List<File> classpaths = new ArrayList<File>();
    Element cpth = IvyXml.getChild(e,"CLASSPATH");
-   
+
    for (Element pe : IvyXml.children(cpth,"PATH")) {
       String typ = IvyXml.getAttrString(pe,"TYPE");
       if (typ.equals("SOURCE")) continue;
       String onm = IvyXml.getTextElement(pe,"BINARY");
       if (onm == null) onm = IvyXml.getTextElement(pe,"OUTPUT");
       if (onm == null) continue;
-      
+
       // skip standard java libraries
       if (onm.contains("/jdk") || onm.contains("\\jdk") ||
-            onm.contains("/jre") || onm.contains("\\jre")) continue;
+	    onm.contains("/jre") || onm.contains("\\jre")) continue;
       if (onm.contains("JavaVirtualMachines")) continue;
       if (onm.startsWith("/System/Library/Java")) continue;
       if (onm.endsWith("/junit.jar") || onm.endsWith("\\junit.jar")) continue;
       if (onm.contains("/eclipse/plugins/org.") || onm.contains("\\eclipse\\plugins\\org.")) continue;
       BoardLog.logD("BAIT","Add context library " + onm);
-      
+
       Element acc = IvyXml.getChild(pe,"ACCESS");
       if (acc != null) continue;
-      
+
       File f = new File(onm);
       if (f.exists()) classpaths.add(f);
     }
-   
+
    Manifest manifest = null;
    for (File f : classpaths) manifest = handleManifest(f,manifest);
-   
+
    try {
       File tnm = File.createTempFile("baitcontext","jar");
       OutputStream ost = new BufferedOutputStream(new FileOutputStream(tnm));
       JarOutputStream jst = null;
       if (manifest == null) jst = new JarOutputStream(ost);
       else jst = new JarOutputStream(ost,manifest);
-      
+
       for (File f : classpaths) addToClassContext(f,jst);
-      
+
       if (data_files != null) {
 	 for (BaitUserFile uf : data_files) addUserFile(uf,jst);
        }
-      
+
       addSourceFile(jst);
-      
+
       addContextFile(jst);
-      
+
       jst.close();
       // send file to server and get remote name
-      
+
       StringWriter sw = new StringWriter();
-      sw.write("<FILE EMBED='FALSE' XML='TRUE' LENGTH='" + tnm.length() + "' >\n");
+      sw.write("<CONTEXTFILE EMBED='FALSE' LENGTH='" + tnm.length() + "'");
+      sw.write(" EXTENSION='.jar' >\n");
       sw.write("<CONTENTS><![CDATA[");
-      
+
       byte [] buf = new byte[8192];
       try (FileInputStream fis = new FileInputStream(tnm)) {
 	 for ( ; ; ) {
@@ -211,7 +212,7 @@ void createSearchContext()
 	  }
        }
       sw.write("]]></CONTENTS>\n</FILE>\n");
-      
+
       context_file = sw.toString();
     }
    catch (IOException ex) {
@@ -228,10 +229,10 @@ void createSearchContext()
 /*										*/
 /********************************************************************************/
 
-void startSearch(BaitGenerateRequest sr) 
+void startSearch(BaitGenerateRequest sr)
 {
    SearchRunner searcher = new SearchRunner(sr,createGenerateRequest());
-   
+
    BoardThreadPool.start(searcher);
 }
 
@@ -239,7 +240,7 @@ void startSearch(BaitGenerateRequest sr)
 void startUISearch(BaitGenerateRequest sr)
 {
    SearchRunner searcher = new SearchRunner(sr,createUIRequest());
-   
+
    BoardThreadPool.start(searcher);
 }
 
@@ -249,7 +250,7 @@ private String createGenerateRequest()
 {
    String msgn = checkSignature();
    String methodname = bump_location.getSymbolName();
-   
+
    IvyXmlWriter xw = new IvyXmlWriter();
    xw.begin("SEARCH");
    xw.field("WHAT","METHOD");
@@ -258,7 +259,7 @@ private String createGenerateRequest()
    xw.field("USECONTEXT",context_flag);
    xw.textElement("SIGNATURE",msgn);
    xw.cdataElement("DESCRIPTION",generate_description);
-   
+
    xw.begin("TESTS");
    int ctr = 0;
    if (test_cases != null) {
@@ -298,16 +299,17 @@ private String createGenerateRequest()
        }
     }
    xw.end("TESTS");
-   
+
    if (context_file != null) {
+      xw.xmlText(context_file);
       xw.textElement("CONTEXT",context_file);
     }
-   
+
    xw.end("SEARCH");
-   
+
    String rslt = xw.toString();
    xw.close();
-   
+
    return rslt;
 }
 
@@ -318,7 +320,7 @@ private String createUIRequest()
    List<String> srcs = new ArrayList<String>();
    String s6 = bump_location.getS6Source();
    srcs.add(s6);
-   
+
    String xml = "<SEARCH FORMAT='NONE' SCOPE='" + scope + "' WHAT='UIFRAMEWORK'>";
    xml += "<SIGNATURE><UI CLASS='S6_UI_CLASS' PACKAGE='spr.sampler.uitest'>";
    xml += "<COMPONENT HEIGHT='100' WIDTH='100' X='0' Y='0' ID='U_1' TYPES='java.awt.Container' />";
@@ -343,7 +345,7 @@ private String createUIRequest()
     }
    xml += "</SOURCES>";
    xml += "</SEARCH>";
-   
+
    return xml;
 }
 
@@ -351,44 +353,44 @@ private String createUIRequest()
 
 
 private class SearchRunner implements Runnable {
-   
+
    private String search_request;
    private BaitGenerateRequest search_callback;
-   
+
    SearchRunner(BaitGenerateRequest sr,String rq) {
       search_callback = sr;
       search_request = rq;
     }
-   
+
    @Override public void run() {
       if (search_request == null) {
-         search_callback.handleGenerateFailed();
-         return;
+	 search_callback.handleGenerateFailed();
+	 return;
        }
       CommandArgs args = new CommandArgs("TYPE","METHOD");
       BaitFactory bf = BaitFactory.getFactory();
       Element rslt = bf.sendLimbaMessage("FIND",args,search_request);
-      
+
       List<BaitGenerateResult> rslts = new ArrayList<>();
       Element sols = IvyXml.getChild(rslt,"SOLUTIONS");
-      for (Element sol : IvyXml.children(sols,"SOLUTION")) { 
-         LimbaGenerateResult sr = new LimbaGenerateResult(sol);
-         rslts.add(sr);
+      for (Element sol : IvyXml.children(sols,"SOLUTION")) {
+	 LimbaGenerateResult sr = new LimbaGenerateResult(sol);
+	 rslts.add(sr);
        }
-      
+
       List<BaitGenerateInput> irslt = new ArrayList<BaitGenerateInput>();
       Element inps = IvyXml.getChild(rslt,"USERINPUT");
       Element test = IvyXml.getChild(inps,"TESTCASE");
       for (Element uc : IvyXml.children(test,"USERCASE")) {
-         LimbaUIResult sr = new LimbaUIResult(uc);
-         irslt.add(sr);
+	 LimbaUIResult sr = new LimbaUIResult(uc);
+	 irslt.add(sr);
        }
-      
+
       if (rslts.size() > 0) search_callback.handleGenerateSucceeded(rslts);
-      else if (irslt.size() > 0) search_callback.handleGenerateInputs(irslt); 
+      else if (irslt.size() > 0) search_callback.handleGenerateInputs(irslt);
       else search_callback.handleGenerateFailed();
     }
-   
+
 }	// end of inner class SearchRunner
 
 
@@ -403,9 +405,9 @@ private String checkSignature()
    int idx = snm.lastIndexOf(".");
    if (idx > 0) snm = snm.substring(idx+1);
    String ret = bump_location.getReturnType();
-   
+
    String sgn = pfx + ret + " " + snm + pnm;
-   
+
    return sgn;
 }
 
@@ -425,13 +427,13 @@ private void addContextFile(JarOutputStream jst) throws IOException
 {
    ZipEntry ze = new ZipEntry("S6.CONTEXT");
    jst.putNextEntry(ze);
-   
+
    IvyXmlWriter xw = new IvyXmlWriter(jst);
    xw.begin("CONTEXT");
    xw.field("LANGUAGE","JAVA");
    xw.field("USEPATH",true);
    xw.field("SEPARATOR",File.separator);
-   
+
    String mnm = bump_location.getSymbolName();
    int idx = mnm.lastIndexOf(".");
    String cnm = null;
@@ -447,13 +449,13 @@ private void addContextFile(JarOutputStream jst) throws IOException
     }
    if (pnm != null) xw.field("PACKAGE",pnm);
    if (cnm != null) xw.field("CLASS",cnm);
-   
+
    // output imports ?
-   
+
    if (data_files != null) {
       for (BaitUserFile uf : data_files) uf.addEntry(xw);
     }
-   
+
    xw.end("CONTEXT");
    xw.flush();
    jst.closeEntry();
@@ -466,7 +468,7 @@ private Manifest handleManifest(File f,Manifest m)
 {
    if (!f.exists() || !f.canRead()) return m;
    if (f.isDirectory()) return m;
-   
+
    try {
       JarFile jf = new JarFile(f);
       Manifest m1 = jf.getManifest();
@@ -476,7 +478,7 @@ private Manifest handleManifest(File f,Manifest m)
    catch (IOException e) {
       BoardLog.logE("BAIT","Java file must be a directory or a jar file");
     }
-   
+
    return m;
 }
 
@@ -486,7 +488,7 @@ private Manifest mergeManifest(Manifest m0,Manifest m1)
 {
    if (m0 == null) return m1;
    if (m1 == null) m1 = new Manifest();
-   
+
    Attributes na = m0.getMainAttributes();
    Attributes a = m1.getMainAttributes();
    a.putAll(na);
@@ -497,7 +499,7 @@ private Manifest mergeManifest(Manifest m0,Manifest m1)
       if (ma == null) mm.put(ent.getKey(),ent.getValue());
       else ma.putAll(ent.getValue());
     }
-   
+
    return m1;
 }
 
@@ -538,7 +540,7 @@ private void addSimpleFile(File f,String pfx,JarOutputStream jst) throws IOExcep
       x = x.substring(i);
       if (x.startsWith(File.separator)) x = x.substring(1);
     }
-   
+
    addToJarFile(f,x,jst);
 }
 
@@ -549,7 +551,7 @@ private void addJarFile(JarFile jf,JarOutputStream jst) throws IOException
    for (Enumeration<JarEntry> e = jf.entries(); e.hasMoreElements(); ) {
       ZipEntry je = e.nextElement();
       if (je.getName().equals("META-INF/MANIFEST.MF")) continue;
-      
+
       BufferedInputStream ins = new BufferedInputStream(jf.getInputStream(je));
       addToJarFile(ins,je.getName(),jst);
     }
@@ -568,7 +570,7 @@ private void addToJarFile(File f,String jnm,JarOutputStream jst) throws IOExcept
 {
    if (!f.exists() || !f.canRead()) return;
    BufferedInputStream ins = new BufferedInputStream(new FileInputStream(f));
-   
+
    addToJarFile(ins,jnm,jst);
 }
 
@@ -577,7 +579,7 @@ private void addToJarFile(File f,String jnm,JarOutputStream jst) throws IOExcept
 private void addToJarFile(InputStream ins,String jnm,JarOutputStream jst) throws IOException
 {
    byte [] buf = new byte[16384];
-   
+
    ZipEntry ze = new ZipEntry(jnm);
    try {
       jst.putNextEntry(ze);
@@ -586,7 +588,7 @@ private void addToJarFile(InputStream ins,String jnm,JarOutputStream jst) throws
       ins.close();
       return;
     }
-   
+
    for ( ; ; ) {
       int ln = ins.read(buf);
       if (ln <= 0) break;
@@ -619,13 +621,13 @@ private void addUserFile(BaitUserFile uf,JarOutputStream jst) throws IOException
 /********************************************************************************/
 
 private static class LimbaGenerateResult implements BaitGenerateResult {
-   
+
    private String result_name;
    private String result_source;
    private String result_code;
    private int	  result_lines;
    private int	  result_size;
-   
+
    LimbaGenerateResult(Element xml) {
       result_name = IvyXml.getTextElement(xml,"NAME");
       result_source = IvyXml.getTextElement(xml,"SOLSRC");
@@ -635,21 +637,21 @@ private static class LimbaGenerateResult implements BaitGenerateResult {
       result_size = IvyXml.getAttrInt(comp,"CODE");
       // result_time = IvyXml.getAttrDouble(comp,"TESTTIME");
     }
-   
+
    @Override public String getResultName()	{ return result_name; }
    @Override public String getCode()		{ return result_code; }
    @Override public String getSource()		{ return result_source; }
    @Override public int getNumLines()		{ return result_lines; }
    @Override public int getCodeSize()		{ return result_size; }
-   
+
 }	// end of inner class SearchResult
 
 
 
 private static class LimbaUIResult implements BaitGenerateInput {
-   
+
    private BufferedImage user_image;
-   
+
    LimbaUIResult(Element xml) {
       user_image = null;
       String imghtml = IvyXml.getTextElement(xml,"VALUE");
@@ -660,22 +662,22 @@ private static class LimbaUIResult implements BaitGenerateInput {
       byte [] img = Base64.getDecoder().decode(src);
       ByteArrayInputStream bas = new ByteArrayInputStream(img);
       try {
-         user_image = ImageIO.read(bas);
+	 user_image = ImageIO.read(bas);
        }
       catch (IOException e) {
-         BoardLog.logE("BAIT","Problem converting image",e);
+	 BoardLog.logE("BAIT","Problem converting image",e);
        }
-      
+
       // jar_string = IvyXml.getTextElement(xml,"RUNJAR");
     }
-   
+
    @Override public BufferedImage getImage()	{ return user_image; }
-   
+
 }	// end of inner class S6UIResult
 
 
 
-}       // end of class BaitGenerateEngine
+}	// end of class BaitGenerateEngine
 
 
 
