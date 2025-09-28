@@ -194,20 +194,32 @@ void setupSearchContext(IvyXmlWriter xw)
    startContextFile(xw);
    
    File src = bump_location.getFile();
-   if (src != null && src.exists()) {
-      outputFile(xw,"SOURCE",src);
-    }
-   
-   if (data_files != null) {
-      for (BaitUserFile uf : data_files) {
-         outputFile(xw,"DATA",uf.getFile());
+   if (bp.getBoolean("Bait.remote.access")) {
+      if (src != null && src.exists()) {
+         outputFile(xw,"SOURCE",src);
+       }
+      if (data_files != null) {
+         for (BaitUserFile uf : data_files) {
+            outputFile(xw,"DATA",uf.getFile());
+          }
+       }
+      if (tnm != null) {
+         outputFile(xw,"CONTEXTJAR",tnm);
        }
     }
-   
-   if (tnm != null) {
-      outputFile(xw,"CONTEXTJAR",tnm);
-    }
    else {
+      if (src != null && src.exists()) {
+         xw.begin("SOURCE");
+         xw.field("NAME",src.getPath());
+         xw.end("SOURCE");
+       }
+      if (data_files != null) {
+         for (BaitUserFile uf : data_files) {
+            xw.begin("DATA");
+            xw.field("NAME",uf.getFile().getPath());
+            xw.end("DATA");
+          }
+       }
       for (File f : classpaths) {
          xw.textElement("CLASSPATH",f.getPath());
        }
