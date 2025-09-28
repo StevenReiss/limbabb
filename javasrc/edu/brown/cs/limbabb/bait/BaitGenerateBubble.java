@@ -327,7 +327,6 @@ private void doGenerate()
    if (data_files.getSize() > 0) needctx = true;
    if (needctx) {
       eng.setDataFiles(data_files.getElements());
-      eng.createSearchContext();
     }
    eng.setContextFlag(context_field.isSelected());
    

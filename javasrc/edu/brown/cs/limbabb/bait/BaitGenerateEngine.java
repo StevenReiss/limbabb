@@ -32,7 +32,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.StringWriter;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -55,6 +54,7 @@ import org.w3c.dom.Element;
 import edu.brown.cs.bubbles.batt.BattConstants.BattCallTest;
 import edu.brown.cs.bubbles.batt.BattConstants.BattTest;
 import edu.brown.cs.bubbles.board.BoardLog;
+import edu.brown.cs.bubbles.board.BoardProperties;
 import edu.brown.cs.bubbles.board.BoardThreadPool;
 import edu.brown.cs.bubbles.bump.BumpClient;
 import edu.brown.cs.bubbles.bump.BumpLocation;
@@ -73,7 +73,6 @@ class BaitGenerateEngine implements BaitConstants
 /********************************************************************************/
 
 private BumpLocation	bump_location;
-private String		context_file;
 private boolean 	context_flag;
 private String		generate_description;
 private List<BattCallTest> test_cases;
@@ -92,7 +91,6 @@ private String		test_code;
 BaitGenerateEngine(BumpLocation loc)
 {
    bump_location = loc;
-   context_file = null;
    generate_description = null;
    test_cases = null;
    user_tests = null;
@@ -132,10 +130,12 @@ void setDataFiles(Collection<BaitUserFile> fl)
 
 void setContextFlag(boolean fg) 		{ context_flag = fg; }
 
-void createSearchContext()
+void setupSearchContext(IvyXmlWriter xw)
 {
    BoardLog.logD("BAIT","Creating context");
-
+   
+   BoardProperties bp = BoardProperties.getProperties("Bait");
+   
    Element e = BumpClient.getBump().getProjectData(bump_location.getProject(),
 	 false,true,false,false,false);
    if (e == null) {
@@ -168,59 +168,88 @@ void createSearchContext()
       File f = new File(onm);
       if (f.exists()) classpaths.add(f);
     }
-
-   Manifest manifest = null;
-   for (File f : classpaths) manifest = handleManifest(f,manifest);
-
-   try {
-      File tnm = File.createTempFile("baitcontext","jar");
-      OutputStream ost = new BufferedOutputStream(new FileOutputStream(tnm));
-      JarOutputStream jst = null;
-      if (manifest == null) jst = new JarOutputStream(ost);
-      else jst = new JarOutputStream(ost,manifest);
-
-      for (File f : classpaths) addToClassContext(f,jst);
-
-      if (data_files != null) {
-	 for (BaitUserFile uf : data_files) addUserFile(uf,jst);
+   
+   File tnm = null;
+   if (bp.getBoolean("Bait.remote.access")) {
+      Manifest manifest = null;
+      for (File f : classpaths) manifest = handleManifest(f,manifest);
+      try {
+         tnm = File.createTempFile("baitcontext","jar");
+         OutputStream ost = new BufferedOutputStream(new FileOutputStream(tnm));
+         JarOutputStream jst = null;
+         if (manifest == null) jst = new JarOutputStream(ost);
+         else jst = new JarOutputStream(ost,manifest);
+         
+         for (File f : classpaths) addToClassContext(f,jst);
+         jst.close();
        }
-
-      addSourceFile(jst);
-
-      addContextFile(jst);
-
-      jst.close();
-      // send file to server and get remote name
-
-      StringWriter sw = new StringWriter();
-      sw.write("<CONTEXTFILE EMBED='FALSE' LENGTH='" + tnm.length() + "'");
-      sw.write(" EXTENSION='.jar' >\n");
-      sw.write("<CONTENTS><![CDATA[");
-
-      byte [] buf = new byte[8192];
-      try (FileInputStream fis = new FileInputStream(tnm)) {
-	 for ( ; ; ) {
-	    int rln = fis.read(buf);
-	    if (rln <= 0) break;
-	    for (int i = 0; i < rln; ++i) {
-	       int v = buf[i] & 0xff;
-	       String s1 = Integer.toHexString(v);
-	       if (s1.length() == 1) sw.write("0");
-	       sw.write(s1);
-	       if ((i%32) == 31) sw.write("\n");
-	     }
-	  }
+      catch (IOException ex) {
+         BoardLog.logE("BAIT","Problem creating context jar file",ex);
+         return;
        }
-      sw.write("]]></CONTENTS>\n</FILE>\n");
-
-      context_file = sw.toString();
     }
-   catch (IOException ex) {
-      BoardLog.logE("BAIT","Problem creating context jar file",ex);
-      return;
+      
+   xw.begin("CONTEXT");
+   
+   startContextFile(xw);
+   
+   File src = bump_location.getFile();
+   if (src != null && src.exists()) {
+      outputFile(xw,"SOURCE",src);
     }
+   
+   if (data_files != null) {
+      for (BaitUserFile uf : data_files) {
+         outputFile(xw,"DATA",uf.getFile());
+       }
+    }
+   
+   if (tnm != null) {
+      outputFile(xw,"CONTEXTJAR",tnm);
+    }
+   else {
+      for (File f : classpaths) {
+         xw.textElement("CLASSPATH",f.getPath());
+       }
+    }
+   
+   xw.end("CONTEXT"); 
 }
 
+
+
+private void outputFile(IvyXmlWriter xw,String key,File f)
+{
+   StringBuffer sbuf = new StringBuffer();
+   byte [] buf = new byte[8192];
+   try (FileInputStream fis = new FileInputStream(f)) {
+      for ( ; ; ) {
+         int rln = fis.read(buf);
+         if (rln <= 0) break;
+         for (int i = 0; i < rln; ++i) {
+            int v = buf[i] & 0xff;
+            String s1 = Integer.toHexString(v);
+            if (s1.length() == 1) sbuf.append("0");
+            sbuf.append(s1);
+            if ((i%32) == 31) sbuf.append("\n");
+          }
+       }
+    }
+   catch (IOException e) { 
+      return;
+    }
+   
+   xw.begin(key);
+   xw.field("LENGTH",f.length());
+   String fnm = f.getName();
+   xw.field("NAME",fnm);
+   int idx = fnm.lastIndexOf(".");
+   if (idx > 0) {
+      xw.field("EXTENSION",fnm.substring(idx));
+    }
+   xw.cdataElement("CONTENTS",sbuf.toString());
+   xw.end(key);
+}
 
 
 /********************************************************************************/
@@ -247,7 +276,7 @@ void startUISearch(BaitGenerateRequest sr)
 
 
 private String createGenerateRequest()
-{
+{												
    String msgn = checkSignature();
    String methodname = bump_location.getSymbolName();
 
@@ -300,10 +329,7 @@ private String createGenerateRequest()
     }
    xw.end("TESTS");
 
-   if (context_file != null) {
-      xw.xmlText(context_file);
-      xw.textElement("CONTEXT",context_file);
-    }
+   setupSearchContext(xw);
 
    xw.end("SEARCH");
 
@@ -423,13 +449,8 @@ private String checkSignature()
 /*										*/
 /********************************************************************************/
 
-private void addContextFile(JarOutputStream jst) throws IOException
+private void startContextFile(IvyXmlWriter xw)
 {
-   ZipEntry ze = new ZipEntry("S6.CONTEXT");
-   jst.putNextEntry(ze);
-
-   IvyXmlWriter xw = new IvyXmlWriter(jst);
-   xw.begin("CONTEXT");
    xw.field("LANGUAGE","JAVA");
    xw.field("USEPATH",true);
    xw.field("SEPARATOR",File.separator);
@@ -455,10 +476,6 @@ private void addContextFile(JarOutputStream jst) throws IOException
    if (data_files != null) {
       for (BaitUserFile uf : data_files) uf.addEntry(xw);
     }
-
-   xw.end("CONTEXT");
-   xw.flush();
-   jst.closeEntry();
 }
 
 
@@ -558,11 +575,7 @@ private void addJarFile(JarFile jf,JarOutputStream jst) throws IOException
 }
 
 
-private void addSourceFile(JarOutputStream jst) throws IOException
-{
-   File f = bump_location.getFile();
-   if (f != null && f.exists()) addToJarFile(f,"LIMBA.SOURCE",jst);
-}
+
 
 
 
@@ -601,16 +614,7 @@ private void addToJarFile(InputStream ins,String jnm,JarOutputStream jst) throws
 
 
 
-/********************************************************************************/
-/*										*/
-/*	User Data files 							*/
-/*										*/
-/********************************************************************************/
 
-private void addUserFile(BaitUserFile uf,JarOutputStream jst) throws IOException
-{
-   addToJarFile(uf.getFile(),uf.getJarName(),jst);
-}
 
 
 
