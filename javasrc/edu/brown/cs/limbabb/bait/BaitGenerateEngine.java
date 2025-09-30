@@ -130,105 +130,6 @@ void setDataFiles(Collection<BaitUserFile> fl)
 
 void setContextFlag(boolean fg) 		{ context_flag = fg; }
 
-void setupSearchContext(IvyXmlWriter xw)
-{
-   BoardLog.logD("BAIT","Creating context");
-   
-   BoardProperties bp = BoardProperties.getProperties("Bait");
-   
-   Element e = BumpClient.getBump().getProjectData(bump_location.getProject(),
-	 false,true,false,false,false);
-   if (e == null) {
-      BoardLog.logD("BAIT","No project data available for context for " + bump_location.getProject());
-      return;
-    }
-
-   List<File> classpaths = new ArrayList<File>();
-   Element cpth = IvyXml.getChild(e,"CLASSPATH");
-
-   for (Element pe : IvyXml.children(cpth,"PATH")) {
-      String typ = IvyXml.getAttrString(pe,"TYPE");
-      if (typ.equals("SOURCE")) continue;
-      String onm = IvyXml.getTextElement(pe,"BINARY");
-      if (onm == null) onm = IvyXml.getTextElement(pe,"OUTPUT");
-      if (onm == null) continue;
-
-      // skip standard java libraries
-      if (onm.contains("/jdk") || onm.contains("\\jdk") ||
-	    onm.contains("/jre") || onm.contains("\\jre")) continue;
-      if (onm.contains("JavaVirtualMachines")) continue;
-      if (onm.startsWith("/System/Library/Java")) continue;
-      if (onm.endsWith("/junit.jar") || onm.endsWith("\\junit.jar")) continue;
-      if (onm.contains("/eclipse/plugins/org.") || onm.contains("\\eclipse\\plugins\\org.")) continue;
-      BoardLog.logD("BAIT","Add context library " + onm);
-
-      Element acc = IvyXml.getChild(pe,"ACCESS");
-      if (acc != null) continue;
-
-      File f = new File(onm);
-      if (f.exists()) classpaths.add(f);
-    }
-   
-   File tnm = null;
-   if (bp.getBoolean("Bait.remote.access")) {
-      Manifest manifest = null;
-      for (File f : classpaths) manifest = handleManifest(f,manifest);
-      try {
-         tnm = File.createTempFile("baitcontext","jar");
-         OutputStream ost = new BufferedOutputStream(new FileOutputStream(tnm));
-         JarOutputStream jst = null;
-         if (manifest == null) jst = new JarOutputStream(ost);
-         else jst = new JarOutputStream(ost,manifest);
-         
-         for (File f : classpaths) addToClassContext(f,jst);
-         jst.close();
-       }
-      catch (IOException ex) {
-         BoardLog.logE("BAIT","Problem creating context jar file",ex);
-         return;
-       }
-    }
-      
-   xw.begin("CONTEXT");
-   
-   startContextFile(xw);
-   
-   File src = bump_location.getFile();
-   if (bp.getBoolean("Bait.remote.access")) {
-      if (src != null && src.exists()) {
-         outputFile(xw,"SOURCE",src);
-       }
-      if (data_files != null) {
-         for (BaitUserFile uf : data_files) {
-            outputFile(xw,"DATA",uf.getFile());
-          }
-       }
-      if (tnm != null) {
-         outputFile(xw,"CONTEXTJAR",tnm);
-       }
-    }
-   else {
-      if (src != null && src.exists()) {
-         xw.begin("SOURCE");
-         xw.field("NAME",src.getPath());
-         xw.end("SOURCE");
-       }
-      if (data_files != null) {
-         for (BaitUserFile uf : data_files) {
-            xw.begin("DATA");
-            xw.field("NAME",uf.getFile().getPath());
-            xw.end("DATA");
-          }
-       }
-      for (File f : classpaths) {
-         xw.textElement("CLASSPATH",f.getPath());
-       }
-    }
-   
-   xw.end("CONTEXT"); 
-}
-
-
 
 private void outputFile(IvyXmlWriter xw,String key,File f)
 {
@@ -236,21 +137,21 @@ private void outputFile(IvyXmlWriter xw,String key,File f)
    byte [] buf = new byte[8192];
    try (FileInputStream fis = new FileInputStream(f)) {
       for ( ; ; ) {
-         int rln = fis.read(buf);
-         if (rln <= 0) break;
-         for (int i = 0; i < rln; ++i) {
-            int v = buf[i] & 0xff;
-            String s1 = Integer.toHexString(v);
-            if (s1.length() == 1) sbuf.append("0");
-            sbuf.append(s1);
-            if ((i%32) == 31) sbuf.append("\n");
-          }
+	 int rln = fis.read(buf);
+	 if (rln <= 0) break;
+	 for (int i = 0; i < rln; ++i) {
+	    int v = buf[i] & 0xff;
+	    String s1 = Integer.toHexString(v);
+	    if (s1.length() == 1) sbuf.append("0");
+	    sbuf.append(s1);
+	    if ((i%32) == 31) sbuf.append("\n");
+	  }
        }
     }
-   catch (IOException e) { 
+   catch (IOException e) {
       return;
     }
-   
+
    xw.begin(key);
    xw.field("LENGTH",f.length());
    String fnm = f.getName();
@@ -278,20 +179,13 @@ void startSearch(BaitGenerateRequest sr)
 }
 
 
-void startUISearch(BaitGenerateRequest sr)
-{
-   SearchRunner searcher = new SearchRunner(sr,createUIRequest());
-
-   BoardThreadPool.start(searcher);
-}
-
-
 
 private String createGenerateRequest()
-{												
+{											
    String msgn = checkSignature();
    String methodname = bump_location.getSymbolName();
-
+   BoardProperties bp = BoardProperties.getProperties("Bait");
+   
    IvyXmlWriter xw = new IvyXmlWriter();
    xw.begin("SEARCH");
    xw.field("WHAT","METHOD");
@@ -300,6 +194,7 @@ private String createGenerateRequest()
    xw.field("USECONTEXT",context_flag);
    xw.textElement("SIGNATURE",msgn);
    xw.cdataElement("DESCRIPTION",generate_description);
+   if (bp.getBoolean("Bait.remote.access")) xw.field("REMOTE",true);
 
    xw.begin("TESTS");
    int ctr = 0;
@@ -310,7 +205,7 @@ private String createGenerateRequest()
 	 xw.field("TYPE","CALLS");
 	 xw.begin("CALL");
 	 xw.field("METHOD",methodname);
-	 xw.field("OP",bct.getTestOp());
+	 xw.field("OP",bct.getTestOpName());
 	 xw.begin("INPUT");
 	 xw.cdataElement("VALUE",bct.getTestInput());
 	 xw.end("INPUT");
@@ -352,40 +247,105 @@ private String createGenerateRequest()
 }
 
 
-private String createUIRequest()
+void setupSearchContext(IvyXmlWriter xw)
 {
-   String scope = "FILE";
-   List<String> srcs = new ArrayList<String>();
-   String s6 = bump_location.getS6Source();
-   srcs.add(s6);
-
-   String xml = "<SEARCH FORMAT='NONE' SCOPE='" + scope + "' WHAT='UIFRAMEWORK'>";
-   xml += "<SIGNATURE><UI CLASS='S6_UI_CLASS' PACKAGE='spr.sampler.uitest'>";
-   xml += "<COMPONENT HEIGHT='100' WIDTH='100' X='0' Y='0' ID='U_1' TYPES='java.awt.Container' />";
-   xml += "<CLASS NAME='S6_UI_CLASS'><METHOD NAME='S6_UI' RETURN='java.awt.Component' /></CLASS>";
-   xml += "</UI></SIGNATURE>";
-   xml += "<TESTS><TESTCASE NAME='SVIUI_1' TYPE='CALLS'>";
-   xml += "<CALL METHOD='S6_UI_CLASS' NEW='true' OP='SAVE'>";
-   xml += "<OUTPUT TYPE='SAVE' VALUE='x'><CODE>S6_UI_CLASS x;</CODE></OUTPUT>";
-   xml += "</CALL>";
-   xml += "<CALL METHOD='S6_UI' THIS='x' OP='SAVE'>";
-   xml += "<OUTPUT TYPE='SAVE' VALUE='y'><CODE>java.awt.Component y;</CODE></OUTPUT>";
-   xml += "</CALL>";
-   xml += "<CALL OP='SCOREHIER' THIS='y'>";
-   xml += "<OUTPUT TYPE='SAVE' VALUE='__score__'><CODE>double __score__;</CODE></OUTPUT>";
-   xml += "</CALL>";
-   xml += "<CALL OP='INTERACT' THIS='y'><INPUT TYPE='VARIABLE' VALUE='__score__' /></CALL>";
-   xml += "</TESTCASE></TESTS>";
-   xml += "<SOURCES>";
-   for (String s : srcs) {
-      s = IvyXml.xmlSanitize(s,false);
-      xml += "<SOURCE USE='TRUE'>" + s + "</SOURCE>";
+   BoardLog.logD("BAIT","Creating context");
+   
+   BoardProperties bp = BoardProperties.getProperties("Bait");
+   
+   Element e = BumpClient.getBump().getProjectData(bump_location.getProject(),
+	 false,true,false,false,false);
+   if (e == null) {
+      BoardLog.logD("BAIT","No project data available for context for " + bump_location.getProject());
+      return;
     }
-   xml += "</SOURCES>";
-   xml += "</SEARCH>";
-
-   return xml;
+   
+   List<File> classpaths = new ArrayList<File>();
+   Element cpth = IvyXml.getChild(e,"CLASSPATH");
+   
+   for (Element pe : IvyXml.children(cpth,"PATH")) {
+      String typ = IvyXml.getAttrString(pe,"TYPE");
+      if (typ.equals("SOURCE")) continue;
+      String onm = IvyXml.getTextElement(pe,"BINARY");
+      if (onm == null) onm = IvyXml.getTextElement(pe,"OUTPUT");
+      if (onm == null) continue;
+      
+      // skip standard java libraries
+      if (onm.contains("/jdk") || onm.contains("\\jdk") ||
+	    onm.contains("/jre") || onm.contains("\\jre")) continue;
+      if (onm.contains("JavaVirtualMachines")) continue;
+      if (onm.startsWith("/System/Library/Java")) continue;
+      if (onm.endsWith("/junit.jar") || onm.endsWith("\\junit.jar")) continue;
+      if (onm.contains("/eclipse/plugins/org.") || onm.contains("\\eclipse\\plugins\\org.")) continue;
+      BoardLog.logD("BAIT","Add context library " + onm);
+      
+      Element acc = IvyXml.getChild(pe,"ACCESS");
+      if (acc != null) continue;
+      
+      File f = new File(onm);
+      if (f.exists()) classpaths.add(f);
+    }
+   
+   File tnm = null;
+   if (bp.getBoolean("Bait.remote.access")) {
+      Manifest manifest = null;
+      for (File f : classpaths) manifest = handleManifest(f,manifest);
+      try {
+	 tnm = File.createTempFile("baitcontext","jar");
+	 OutputStream ost = new BufferedOutputStream(new FileOutputStream(tnm));
+	 JarOutputStream jst = null;
+	 if (manifest == null) jst = new JarOutputStream(ost);
+	 else jst = new JarOutputStream(ost,manifest);
+         
+	 for (File f : classpaths) addToClassContext(f,jst);
+	 jst.close();
+       }
+      catch (IOException ex) {
+	 BoardLog.logE("BAIT","Problem creating context jar file",ex);
+	 return;
+       }
+    }
+   
+   xw.begin("CONTEXT");
+   
+   startContextFile(xw);
+   
+   File src = bump_location.getFile();
+   if (bp.getBoolean("Bait.remote.access")) {
+      xw.field("REMOTE",true);
+      if (src != null && src.exists()) {
+	 outputFile(xw,"SOURCE",src);
+       }
+      if (data_files != null) {
+	 for (BaitUserFile uf : data_files) {
+	    outputFile(xw,"DATA",uf.getFile());
+	  }
+       }
+      if (tnm != null) {
+	 outputFile(xw,"CONTEXTJAR",tnm);
+       }
+    }
+   else {
+      if (src != null && src.exists()) {
+	 xw.begin("SOURCE");
+	 xw.field("NAME",src.getPath());
+	 xw.end("SOURCE");
+       }
+      if (data_files != null) {
+	 for (BaitUserFile uf : data_files) {
+	    xw.begin("DATA");
+	    xw.field("NAME",uf.getFile().getPath());
+	    xw.end("DATA");
+	  }
+       }
+      for (File f : classpaths) {
+	 xw.textElement("CLASSPATH",f.getPath());
+       }
+    }
+   
+   xw.end("CONTEXT");
 }
+
 
 
 
