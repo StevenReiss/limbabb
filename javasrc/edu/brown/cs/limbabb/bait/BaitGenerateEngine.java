@@ -184,6 +184,9 @@ private String createGenerateRequest()
 {											
    String msgn = checkSignature();
    String methodname = bump_location.getSymbolName();
+   int idx = methodname.lastIndexOf(".");
+   if (idx > 0) methodname = methodname.substring(idx+1);
+   
    BoardProperties bp = BoardProperties.getProperties("Bait");
    
    IvyXmlWriter xw = new IvyXmlWriter();
@@ -362,28 +365,28 @@ private class SearchRunner implements Runnable {
 
    @Override public void run() {
       if (search_request == null) {
-	 search_callback.handleGenerateFailed();
-	 return;
+         search_callback.handleGenerateFailed();
+         return;
        }
       CommandArgs args = new CommandArgs("TYPE","METHOD");
       BaitFactory bf = BaitFactory.getFactory();
       Element rslt = bf.sendLimbaMessage("FIND",args,search_request);
-
+   
       List<BaitGenerateResult> rslts = new ArrayList<>();
       Element sols = IvyXml.getChild(rslt,"SOLUTIONS");
       for (Element sol : IvyXml.children(sols,"SOLUTION")) {
-	 LimbaGenerateResult sr = new LimbaGenerateResult(sol);
-	 rslts.add(sr);
+         LimbaGenerateResult sr = new LimbaGenerateResult(sol);
+         rslts.add(sr);
        }
-
+   
       List<BaitGenerateInput> irslt = new ArrayList<BaitGenerateInput>();
       Element inps = IvyXml.getChild(rslt,"USERINPUT");
       Element test = IvyXml.getChild(inps,"TESTCASE");
       for (Element uc : IvyXml.children(test,"USERCASE")) {
-	 LimbaUIResult sr = new LimbaUIResult(uc);
-	 irslt.add(sr);
+         LimbaUIResult sr = new LimbaUIResult(uc);
+         irslt.add(sr);
        }
-
+   
       if (rslts.size() > 0) search_callback.handleGenerateSucceeded(rslts);
       else if (irslt.size() > 0) search_callback.handleGenerateInputs(irslt);
       else search_callback.handleGenerateFailed();
