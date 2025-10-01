@@ -400,7 +400,8 @@ private void scanForPrompt()
 {
    File f = bump_location.getFile();
    String proj = bump_location.getProject();
-   BaleConstants.BaleFileOverview bfo = BaleFactory.getFactory().getFileOverview(proj,f);
+   BaleConstants.BaleFileOverview bfo = BaleFactory.getFactory().
+         getFileOverview(proj,f);
    String code = null;
    try {
       code = bfo.getText(bump_location.getDefinitionOffset(),

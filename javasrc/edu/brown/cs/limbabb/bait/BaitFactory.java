@@ -40,6 +40,7 @@ import edu.brown.cs.bubbles.bump.BumpLocation;
 import edu.brown.cs.ivy.exec.IvyExec;
 import edu.brown.cs.ivy.exec.IvyExecQuery;
 import edu.brown.cs.ivy.file.IvyFile;
+import edu.brown.cs.ivy.file.IvyLog;
 import edu.brown.cs.ivy.mint.MintArguments;
 import edu.brown.cs.ivy.mint.MintConstants;
 import edu.brown.cs.ivy.mint.MintControl;
@@ -391,20 +392,28 @@ private final class StartHandler implements MintHandler {
 /*                                                                              */
 /********************************************************************************/
 
-void issueCommand(String cmd,String body,ResponseHandler hdlr)
+void issueCommand(String cmd,CommandArgs args,String body,ResponseHandler hdlr)
+{
+   IvyXmlWriter xw = new IvyXmlWriter();
+   xw.cdataElement("BODY",body);
+   String cnts = xw.toString();
+   xw.close();
+   issueXmlCommand(cmd,args,cnts,hdlr);
+}
+
+
+void issueXmlCommand(String cmd,CommandArgs args,String body,ResponseHandler hdlr)
 {
    String rid = "LIMBA_" + (int) (Math.random()*1000000);
    hdlr_map.put(rid,hdlr);
-   CommandArgs args = new CommandArgs("RID",rid);
-   IvyXmlWriter xw = new IvyXmlWriter();
-   xw.cdataElement("BODY",body);
-   Element xml = sendLimbaMessage(cmd,args,xw.toString());
-   xw.close();
+   if (args == null) args = new CommandArgs("RID",rid);
+   else args.put("RID",rid);
+   
+   Element xml = sendLimbaMessage(cmd,args,body);
    String nrid = IvyXml.getAttrString(xml,"RID");
    if (!rid.equals(nrid)) {
       BoardLog.logE("BAIT","Reply ids don't match " + rid + " " + nrid);
     }
-   
 }
 
 
@@ -444,7 +453,7 @@ Element sendLimbaMessage(String cmd,CommandArgs args,String cnts)
    
    Element rslt = rply.waitForXml(60000);
    
-   BoardLog.logD("BSEAN","Reply from FAIT: " + IvyXml.convertXmlToString(rslt));
+   BoardLog.logD("BSEAN","Reply from LIMBA: " + IvyXml.convertXmlToString(rslt));
    
    return rslt;
 }
@@ -466,7 +475,10 @@ private final class LimbaHandler implements MintHandler {
          BoardLog.logD("BAIT","Handle deferred reply " + rid + " " +
                IvyXml.convertXmlToString(xml));
          ResponseHandler hdlr = hdlr_map.remove(rid);
-         if (hdlr != null) hdlr.handleResponse(xml);
+         if (hdlr != null) {
+            Element xmlrslt = IvyXml.getChild(xml,"RESULT");
+            hdlr.handleResponse(xmlrslt);
+          }
        }
       catch (Throwable e) {
 	 BoardLog.logE("BAIT","Error processing command",e);
@@ -512,6 +524,48 @@ private boolean createGenerateBubble(BaleContextConfig cfg,boolean test)
    
    return true;
 }
+
+
+private boolean createJavadocHandler(BaleContextConfig cfg)
+{
+   String mnm = cfg.getMethodName();
+   if (mnm == null) return false;
+   
+   List<BumpLocation> locs = BumpClient.getBump().findMethod(null,mnm,false);
+   if (locs == null || locs.size() == 0) return false;
+   BumpLocation loc = null;
+   for (BumpLocation bloc : locs) {
+      int st = bloc.getDefinitionOffset();
+      int ed = bloc.getDefinitionEndOffset();
+      if (cfg.getDocumentOffset() >= st && cfg.getDocumentOffset() <= ed) {
+         loc = bloc;
+         break;
+       }
+    }
+   if (loc == null) return false;
+   BaitJavaDocer bjd = new BaitJavaDocer(loc);
+   bjd.process(); 
+   return true;
+}
+
+
+private boolean createTestCasesHandler(BaleContextConfig cfg)
+{
+   String mnm = cfg.getMethodName();
+   if (mnm == null) return false;
+   
+   List<BumpLocation> locs = BumpClient.getBump().findMethod(null,mnm,false);
+   if (locs == null || locs.size() == 0) return false;
+   BumpLocation loc = locs.get(0);
+   IvyLog.logD("LIMBA","Create test cases for " + loc);
+// BaitJavaDocer bjd = new BaitJavaDocer(loc);
+// bjd.process(); 
+   return true;
+}
+
+
+
+
 
 /********************************************************************************/
 /*                                                                              */
@@ -585,10 +639,29 @@ private class JavadocAction extends AbstractAction {
     }
    
    @Override public void actionPerformed(ActionEvent e) {
-      // generate javadoc for method
+      createJavadocHandler(start_config);
     }
    
 }       // end of inner class JavadocAction
+
+
+
+private class TestCaseAction extends AbstractAction {
+   
+   private transient BaleContextConfig start_config;
+   private static final long serialVersionUID = 1;
+   
+   TestCaseAction(BaleContextConfig cfg) {
+      super("Generate Test Cases for Method");
+      start_config = cfg;
+    }
+   
+   @Override public void actionPerformed(ActionEvent e) {
+      createTestCasesHandler(start_config);
+    }
+
+}       // end of inner class TestCaseAction
+
 
 
 
@@ -607,6 +680,7 @@ private final class BaitContexter implements BaleConstants.BaleContextListener {
             menu.add(new GenerateTestAction(cfg));
             menu.add(new GenerateAction(cfg));
             menu.add(new JavadocAction(cfg));
+            menu.add(new TestCaseAction(cfg));
             break;
          default :
             break;

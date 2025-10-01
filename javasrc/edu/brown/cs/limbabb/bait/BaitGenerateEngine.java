@@ -353,7 +353,7 @@ void setupSearchContext(IvyXmlWriter xw)
 
 
 
-private class SearchRunner implements Runnable {
+private class SearchRunner implements Runnable, ResponseHandler {
 
    private String search_request;
    private BaitGenerateRequest search_callback;
@@ -368,17 +368,38 @@ private class SearchRunner implements Runnable {
          search_callback.handleGenerateFailed();
          return;
        }
-      CommandArgs args = new CommandArgs("TYPE","METHOD");
+      String what = "METHOD";
+      switch (bump_location.getSymbolType()) {
+         case ANNOTATION :
+         case CLASS :
+         case ENUM :
+         case INTERFACE :
+         case THROWABLE :
+            what = "CLASS";
+            break;
+         case CONSTRUCTOR :
+         case FUNCTION :
+         case STATIC_INITIALIZER :
+             what = "METHOD";
+             break;
+         case FIELD :
+         case ENUM_CONSTANT :
+            what = "FIELD";
+            break;
+       }
+      CommandArgs args = new CommandArgs("TYPE",what);
       BaitFactory bf = BaitFactory.getFactory();
-      Element rslt = bf.sendLimbaMessage("FIND",args,search_request);
+      bf.issueXmlCommand("FIND",args,search_request,this);  
+    }
    
+   @Override public void handleResponse(Element rslt) {
       List<BaitGenerateResult> rslts = new ArrayList<>();
       Element sols = IvyXml.getChild(rslt,"SOLUTIONS");
       for (Element sol : IvyXml.children(sols,"SOLUTION")) {
          LimbaGenerateResult sr = new LimbaGenerateResult(sol);
          rslts.add(sr);
        }
-   
+      
       List<BaitGenerateInput> irslt = new ArrayList<BaitGenerateInput>();
       Element inps = IvyXml.getChild(rslt,"USERINPUT");
       Element test = IvyXml.getChild(inps,"TESTCASE");
@@ -386,7 +407,7 @@ private class SearchRunner implements Runnable {
          LimbaUIResult sr = new LimbaUIResult(uc);
          irslt.add(sr);
        }
-   
+      
       if (rslts.size() > 0) search_callback.handleGenerateSucceeded(rslts);
       else if (irslt.size() > 0) search_callback.handleGenerateInputs(irslt);
       else search_callback.handleGenerateFailed();

@@ -194,7 +194,7 @@ private final class SubmitAction implements ActionListener {
    @Override public void actionPerformed(ActionEvent evt) {
       String text = input_area.getText();
       if (text.isBlank()) return;
-      BaitFactory.getFactory().issueCommand("QUERY",text,new Responder());  
+      BaitFactory.getFactory().issueCommand("QUERY",null,text,new Responder());  
       String disp = "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" + text + 
             "</font></p></div>";
       appendOutput(disp);
