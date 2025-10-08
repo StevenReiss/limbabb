@@ -56,7 +56,6 @@ import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -181,9 +180,12 @@ private BaitFactory()
 
 private void start()
 {
-   if (!server_running) server_started = false; 		// for debug
    startLimba();
    if (!server_running) return;
+   BoardProperties bp = BoardProperties.getProperties("Bait");
+   if (bp.getBoolean("Bait.ollama.usecontext")) {
+      issueCommand("PROJECT",null,"QUERY",null);
+    }
 }
 
 
@@ -194,7 +196,6 @@ private boolean startLimba()
 {
    BoardSetup bs = BoardSetup.getSetup();
    MintControl mc = bs.getMintControl();
-   InetSocketAddress addr = mc.getSocketAddress();
    
    if (BoardSetup.getSetup().getRunMode() == RunMode.CLIENT) {
       MintDefaultReply rply = new MintDefaultReply();
@@ -216,18 +217,10 @@ private boolean startLimba()
    File logf = new File(wd,"limba.log");
    
    BoardProperties bp = BoardProperties.getProperties("Bait");
+   
    List<String> args = new ArrayList<>();
    
-   String host = bp.getProperty("Bait.run.host");
-   if (host == null) {
-      args.add(IvyExecQuery.getJavaPath());
-    }
-   else {
-      args.add(BoardSetup.getSetup().getBinaryPath("startlimba"));
-      args.add(host);
-      args.add("-Dedu.brown.cs.ivy.mint.server.host=" + addr.getHostName());
-      args.add("-Dedu.brown.cs.ivy.mint.server.post=" + addr.getPort());
-    }
+   args.add(IvyExecQuery.getJavaPath());
    
    String dbgargs = bp.getProperty("Bait.jvm.args");
    if (dbgargs != null && dbgargs.contains("###")) {
@@ -301,13 +294,20 @@ private boolean startLimba()
       args.add("-port");
       args.add(Integer.toString(op));
     }
+   String ah = bp.getProperty("Bait.ollama.althost");
+   if (ah != null) {
+      args.add("-althost");
+      args.add(ah);
+    }
+   int ap = bp.getInt("Bait.ollama.altport");
+   if (ap > 0) {
+      args.add("-altport");
+      args.add(Integer.toString(ap));
+    }
    String mdl = bp.getString("Bait.ollama.model",null);
    if (mdl != null && !mdl.isEmpty()) {
       args.add("-llama");
       args.add(mdl);
-    }
-   if (host != null && bp.getBoolean("Bait.remote.access")) {
-      args.add("-remote");
     }
             
    synchronized (this) {
@@ -404,6 +404,8 @@ void issueCommand(String cmd,CommandArgs args,String body,ResponseHandler hdlr)
 
 void issueXmlCommand(String cmd,CommandArgs args,String body,ResponseHandler hdlr)
 {
+   if (hdlr == null) hdlr = new DummyResponder(); 
+   
    String rid = "LIMBA_" + (int) (Math.random()*1000000);
    hdlr_map.put(rid,hdlr);
    if (args == null) args = new CommandArgs("RID",rid);
@@ -415,6 +417,11 @@ void issueXmlCommand(String cmd,CommandArgs args,String body,ResponseHandler hdl
       BoardLog.logE("BAIT","Reply ids don't match " + rid + " " + nrid);
     }
 }
+
+
+private static final class DummyResponder implements ResponseHandler {
+   @Override public void handleResponse(Element xml) { }
+}       // end of inner class DummyResponder
 
 
 
@@ -593,12 +600,12 @@ private final class SetupLimbaAction implements BudaConstants.ButtonListener {
 }       // end of inner class SetupLimbaAction
 
 
-private class GenerateTestAction extends AbstractAction {
+private class GenerateTestMethodAction extends AbstractAction {
    
    private transient BaleContextConfig start_config;
    private static final long serialVersionUID = 1;
    
-   GenerateTestAction(BaleContextConfig cfg) {
+   GenerateTestMethodAction(BaleContextConfig cfg) {
       super("Generate and Test Method Implementation");
       start_config = cfg;
     }
@@ -607,15 +614,32 @@ private class GenerateTestAction extends AbstractAction {
       createGenerateBubble(start_config,true);
     }
    
-}       // end of inner class GenerateTestAction
+}       // end of inner class GenerateTestMethodAction
 
 
-private class GenerateAction extends AbstractAction {
+private class GenerateTestClassAction extends AbstractAction {
+
+   private transient BaleContextConfig start_config;
+   private static final long serialVersionUID = 1;
+   
+   GenerateTestClassAction(BaleContextConfig cfg) {
+      super("Generate and Test Class Implementation");
+      start_config = cfg;
+    }
+   
+   @Override public void actionPerformed(ActionEvent e) {
+      createGenerateBubble(start_config,true);
+    }
+   
+}       // end of inner class GenerateTestClassAction
+
+
+private class GenerateMethodAction extends AbstractAction {
    
    private transient BaleContextConfig start_config;
    private static final long serialVersionUID = 1;
    
-   GenerateAction(BaleContextConfig cfg) {
+   GenerateMethodAction(BaleContextConfig cfg) {
       super("Generate Method Implementation");
       start_config = cfg;
     }
@@ -624,16 +648,34 @@ private class GenerateAction extends AbstractAction {
       createGenerateBubble(start_config,false);
     }
 
-}       // end of inner class GenerateAction
+}       // end of inner class GenerateMethodAction
 
 
 
-private class JavadocAction extends AbstractAction {
+private class GenerateClassAction extends AbstractAction {
    
    private transient BaleContextConfig start_config;
    private static final long serialVersionUID = 1;
    
-   JavadocAction(BaleContextConfig cfg) {
+   GenerateClassAction(BaleContextConfig cfg) {
+      super("Generate Class Implementation");
+      start_config = cfg;
+    }
+   
+   @Override public void actionPerformed(ActionEvent e) {
+      createGenerateBubble(start_config,false);
+    }
+
+}       // end of inner class GenerateClassAction
+
+
+
+private class JavadocMethodAction extends AbstractAction {
+   
+   private transient BaleContextConfig start_config;
+   private static final long serialVersionUID = 1;
+   
+   JavadocMethodAction(BaleContextConfig cfg) {
       super("Generate JavaDoc for Method");
       start_config = cfg;
     }
@@ -642,16 +684,34 @@ private class JavadocAction extends AbstractAction {
       createJavadocHandler(start_config);
     }
    
-}       // end of inner class JavadocAction
+}       // end of inner class JavadocMethodAction
 
 
 
-private class TestCaseAction extends AbstractAction {
+private class JavadocClassAction extends AbstractAction {
    
    private transient BaleContextConfig start_config;
    private static final long serialVersionUID = 1;
    
-   TestCaseAction(BaleContextConfig cfg) {
+   JavadocClassAction(BaleContextConfig cfg) {
+      super("Generate JavaDoc for Class");
+      start_config = cfg;
+    }
+   
+   @Override public void actionPerformed(ActionEvent e) {
+      createJavadocHandler(start_config);
+    }
+
+}       // end of inner class JavadocClassAction
+
+
+
+private class TestCaseMethodAction extends AbstractAction {
+   
+   private transient BaleContextConfig start_config;
+   private static final long serialVersionUID = 1;
+   
+   TestCaseMethodAction(BaleContextConfig cfg) {
       super("Generate Test Cases for Method");
       start_config = cfg;
     }
@@ -660,7 +720,25 @@ private class TestCaseAction extends AbstractAction {
       createTestCasesHandler(start_config);
     }
 
-}       // end of inner class TestCaseAction
+}       // end of inner class TestCaseMethodAction
+
+
+
+private class TestCaseClassAction extends AbstractAction {
+   
+   private transient BaleContextConfig start_config;
+   private static final long serialVersionUID = 1;
+   
+   TestCaseClassAction(BaleContextConfig cfg) {
+      super("Generate Test Cases for Class");
+      start_config = cfg;
+    }
+   
+   @Override public void actionPerformed(ActionEvent e) {
+      createTestCasesHandler(start_config);
+    }
+   
+}       // end of inner class TestCaseClassction
 
 
 
@@ -677,11 +755,19 @@ private final class BaitContexter implements BaleConstants.BaleContextListener {
    @Override public void addPopupMenuItems(BaleContextConfig cfg,JPopupMenu menu) {
       switch (cfg.getTokenType()) {
          case METHOD_DECL_ID :
-            menu.add(new GenerateTestAction(cfg));
-            menu.add(new GenerateAction(cfg));
-            menu.add(new JavadocAction(cfg));
-            menu.add(new TestCaseAction(cfg));
+            menu.add(new GenerateTestMethodAction(cfg));
+            menu.add(new GenerateMethodAction(cfg));
+            menu.add(new JavadocMethodAction(cfg));
+            menu.add(new TestCaseMethodAction(cfg));
             break;
+         case CLASS_DECL_ID :
+         case TYPE_ID :
+            menu.add(new GenerateTestClassAction(cfg));
+            menu.add(new GenerateClassAction(cfg));
+            menu.add(new JavadocClassAction(cfg));
+            menu.add(new TestCaseClassAction(cfg));
+            break;
+            
          default :
             break;
        }

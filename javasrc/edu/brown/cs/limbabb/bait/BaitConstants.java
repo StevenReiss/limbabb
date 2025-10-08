@@ -49,7 +49,6 @@ interface ResponseHandler {
 interface BaitGenerateResult {
    String getResultName();
    String getCode();
-   String getSource();
    int getNumLines();
    int getCodeSize();
 }

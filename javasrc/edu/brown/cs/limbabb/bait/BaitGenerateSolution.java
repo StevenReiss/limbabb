@@ -77,9 +77,9 @@ private JComponent		compact_component;
 private BumpLocation		base_location;
 
 
-// static {
-// jsyntaxpane.DefaultSyntaxKit.initKit();
-// }
+static {
+   jsyntaxpane.DefaultSyntaxKit.initKit();
+}
 
 
 
@@ -373,6 +373,7 @@ private class ResultBubble extends BudaBubble {
       Dimension sz = jep.getPreferredSize();
       sz.width = Math.min(420,sz.width);
       sz.height = Math.min(300, sz.height);
+      jep.setSize(sz);
       jsp.setSize(sz);
       jep.setPreferredSize(sz);
       setContentPane(jsp,jep);

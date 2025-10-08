@@ -184,15 +184,21 @@ private String createGenerateRequest()
 {											
    String msgn = checkSignature();
    String methodname = bump_location.getSymbolName();
+   String pfx = null;
    int idx = methodname.lastIndexOf(".");
-   if (idx > 0) methodname = methodname.substring(idx+1);
-   
+   if (idx > 0) {
+      pfx = methodname.substring(0,idx);
+      methodname = methodname.substring(idx+1);
+    }
+    
+    
    BoardProperties bp = BoardProperties.getProperties("Bait");
    
    IvyXmlWriter xw = new IvyXmlWriter();
    xw.begin("SEARCH");
    xw.field("WHAT","METHOD");
    xw.field("NAME",methodname);
+   if (pfx != null) xw.field("PREFIX",pfx);
    xw.field("LANGUAGE","JAVA");
    xw.field("USECONTEXT",context_flag);
    xw.textElement("SIGNATURE",msgn);
@@ -610,37 +616,29 @@ private void addToJarFile(InputStream ins,String jnm,JarOutputStream jst) throws
 
 
 
-
-
-
-
 /********************************************************************************/
 /*										*/
 /*	Search result holder							*/
 /*										*/
 /********************************************************************************/
 
-private static class LimbaGenerateResult implements BaitGenerateResult {
+private static class LimbaGenerateResult implements BaitGenerateResult { 
 
    private String result_name;
-   private String result_source;
    private String result_code;
    private int	  result_lines;
    private int	  result_size;
 
    LimbaGenerateResult(Element xml) {
       result_name = IvyXml.getTextElement(xml,"NAME");
-      result_source = IvyXml.getTextElement(xml,"SOLSRC");
       result_code = IvyXml.getTextElement(xml,"CODE");
       Element comp = IvyXml.getChild(xml,"COMPLEXITY");
       result_lines = IvyXml.getAttrInt(comp,"LINES");
       result_size = IvyXml.getAttrInt(comp,"CODE");
-      // result_time = IvyXml.getAttrDouble(comp,"TESTTIME");
     }
 
    @Override public String getResultName()	{ return result_name; }
    @Override public String getCode()		{ return result_code; }
-   @Override public String getSource()		{ return result_source; }
    @Override public int getNumLines()		{ return result_lines; }
    @Override public int getCodeSize()		{ return result_size; }
 

@@ -3,7 +3,9 @@
    <property file='../build.properties' />
    <property name='PRO' value='/research' />
    <property name='IVYBIN' value='${PRO}/ivy/java' />
-   <property name='LIMBA' value='${PRO}/fait' />
+   <property name='IVYLIB' value='${PRO}/ivy/lib' />
+   <property name='BUBLIB' value='${PRO}/bubbles/lib' />
+   <property name='LIMBA' value='${PRO}/limba' />
 
    <target name='all'>
       <ant antfile="build.xml" dir="edu/brown/cs/limbabb/bait" />
@@ -12,7 +14,8 @@
    <path id='jdocsrc'>
       <pathelement location='${LIMBA}/java' />
       <pathelement location='${IVYBIN}' />
-      <fileset dir='${LIMBA}/lib/' includes='asm*.jar' />
+      <fileset dir='${IVYLIB}' includes='asm.jar' />
+      <fileset dir='${BUBLIB}' includes='jsyntaxpane.jar' />
    </path>
 
    <target name='doc'>

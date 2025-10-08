@@ -13,13 +13,17 @@
    <target name='init' depends='init1,init2' >
       <path id='limbabb.classpath'>
 	 <pathelement location='${BUBBLES}/java' />
-	 <pathelement location='${PRO}/fredit/java' />
+	 <pathelement location='${LIMBA}/java' />
 	 <pathelement location='${IVYBIN}' />
+	 <fileset dir='${BUBBLES}/lib' includes='asm.jar' />
+	 <fileset dir='${BUBBLES}/lib' includes='jsyntaxpane.jar' />
       </path>
       <path id='test.classpath'>
 	 <pathelement location='${BUBBLES}/java' />
-	 <pathelement location='${PRO}/fredit/java' />
+	 <pathelement location='${LIMBA}/java' />
 	 <pathelement location='${IVYBIN}' />
+	 <fileset dir='${BUBBLES}/lib' includes='asm.jar' />
+	 <fileset dir='${BUBBLES}/lib' includes='jsyntaxpane.jar' />
       </path>
    </target>
 
