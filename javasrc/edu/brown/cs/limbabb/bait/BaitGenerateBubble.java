@@ -94,6 +94,7 @@ class BaitGenerateBubble extends BudaBubble implements BaitConstants
 
 private transient BumpLocation bump_location;
 private BudaBubble source_bubble;
+private boolean is_method;
 private SwingListSet<BaitUserFile> data_files;
 private JTextArea prompt_field;
 private JComboBox<TestChoice> type_field;
@@ -115,11 +116,12 @@ private transient UserCodePanel user_panel;
 /*                                                                              */
 /********************************************************************************/
 
-BaitGenerateBubble(BumpLocation loc,BudaBubble src,boolean usetests)
+BaitGenerateBubble(BumpLocation loc,BudaBubble src,boolean ismthd,boolean usetests)
 {
    bump_location = loc;
    source_bubble = src;
    test_type = null;
+   is_method = ismthd;
    
    iotest_action = new TestAction(loc);
    iotest_panel = BattFactory.getFactory().createNewTestPanel(iotest_action);
@@ -577,10 +579,12 @@ private class TestAction implements BattConstants.BattTestBubbleCallback {
    TestAction(BumpLocation loc) {
       for_location = loc;
       test_mode = BattConstants.NewTestMode.INPUT_OUTPUT;
+      if (!is_method) test_mode = BattConstants.NewTestMode.CALL_SEQUENCE;
+      
     }
    
    @Override public String getButtonName()			{ return "Start Code Search"; }
-   @Override public BumpLocation getLocation()			{ return for_location; }
+   @Override public BumpLocation getLocation()		{ return for_location; }
    @Override public BattConstants.NewTestMode getTestMode()	{ return test_mode; }
    @Override public String getClassName()			{ return null; }
    @Override public boolean getCreateClass()			{ return false; }

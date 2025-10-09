@@ -513,16 +513,23 @@ private final class PingHandler implements MintHandler {
 /*                                                                              */
 /********************************************************************************/
 
-private boolean createGenerateBubble(BaleContextConfig cfg,boolean test)
+private boolean createGenerateBubble(BaleContextConfig cfg,boolean mthd,boolean test)
 {
-   String mnm = cfg.getMethodName();
+   String mnm = cfg.getFullName(); 
    if (mnm == null) return false;
+   BumpLocation loc = null;
+   if (mthd) {
+      List<BumpLocation> locs = BumpClient.getBump().findMethod(null,mnm,false);
+      if (locs == null || locs.size() == 0) return false;
+      loc = locs.get(0);
+    }
+   else {
+      List<BumpLocation> locs = BumpClient.getBump().findClassDefinition(null,mnm);
+      if (locs == null || locs.size() == 0) return false;
+      loc = locs.get(0);
+    }
    
-   List<BumpLocation> locs = BumpClient.getBump().findMethod(null,mnm,false);
-   if (locs == null || locs.size() == 0) return false;
-   BumpLocation loc = locs.get(0);
-   
-   BudaBubble bb = new BaitGenerateBubble(loc,cfg.getEditor(),test);
+   BudaBubble bb = new BaitGenerateBubble(loc,cfg.getEditor(),mthd,test); 
    
    BudaBubbleArea bba = BudaRoot.findBudaBubbleArea(cfg.getEditor());
    if (bba == null) return false;
@@ -611,7 +618,7 @@ private class GenerateTestMethodAction extends AbstractAction {
     }
    
    @Override public void actionPerformed(ActionEvent e) {
-      createGenerateBubble(start_config,true);
+      createGenerateBubble(start_config,true,true);
     }
    
 }       // end of inner class GenerateTestMethodAction
@@ -628,7 +635,7 @@ private class GenerateTestClassAction extends AbstractAction {
     }
    
    @Override public void actionPerformed(ActionEvent e) {
-      createGenerateBubble(start_config,true);
+      createGenerateBubble(start_config,false,true);
     }
    
 }       // end of inner class GenerateTestClassAction
@@ -645,7 +652,7 @@ private class GenerateMethodAction extends AbstractAction {
     }
    
    @Override public void actionPerformed(ActionEvent e) {
-      createGenerateBubble(start_config,false);
+      createGenerateBubble(start_config,true,false);
     }
 
 }       // end of inner class GenerateMethodAction
@@ -663,7 +670,7 @@ private class GenerateClassAction extends AbstractAction {
     }
    
    @Override public void actionPerformed(ActionEvent e) {
-      createGenerateBubble(start_config,false);
+      createGenerateBubble(start_config,false,false);
     }
 
 }       // end of inner class GenerateClassAction
