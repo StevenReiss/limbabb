@@ -352,10 +352,24 @@ private boolean startLimba()
     }
    if (!server_running) {
       BoardLog.logE("BAIT","Unable to start limba server: " + args);
-      return true;
+      return false;
     }
   
-   return false;
+   return true;
+}
+
+
+private String getProjectProperty(String prop)
+{
+   BoardProperties bp = BoardProperties.getProperties("Bait");
+   BoardSetup bs = BoardSetup.getSetup();
+   String ws = bs.getDefaultWorkspace();
+   int idx = ws.lastIndexOf(".");
+   if (idx > 0) ws = ws.substring(idx+1);
+   String p1 = bp.getProperty(prop + "." + ws);
+   if (p1 != null) return p1;
+   String p2 = bp.getProperty(prop);
+   return p2;
 }
 
 
@@ -378,6 +392,16 @@ private final class StartHandler implements MintHandler {
 
    @Override public void receive(MintMessage msg,MintArguments args) {
       boolean sts = startLimba();
+      if (sts) {
+        String sty = getProjectProperty("Bait.ollama.style");
+        if (sty != null) {
+           sendLimbaMessage("STYLE",null,sty);
+         }
+        String ctx = getProjectProperty("Bait.ollama.context");
+        if (ctx != null) {
+           sendLimbaMessage("CONTEXT",null,ctx);
+         }
+       }
       if (sts) msg.replyTo("<RESULT VALUE='true'/>");
       else msg.replyTo("<RESULT VALUE='false' />");
     }
@@ -448,6 +472,9 @@ Element sendLimbaMessage(String cmd,CommandArgs args,String cnts)
        }
     }
    if (cnts != null) {
+      if (!cnts.startsWith("<")) {
+         cnts = "<BODY>" + cnts + "</BODY>";
+       }
       xw.xmlText(cnts);
     }
    xw.end("LIMBA");
@@ -488,7 +515,7 @@ private final class LimbaHandler implements MintHandler {
           }
        }
       catch (Throwable e) {
-	 BoardLog.logE("BAIT","Error processing command",e);
+         BoardLog.logE("BAIT","Error processing command",e);
        }
       msg.replyTo(rslt);
    }
@@ -601,7 +628,9 @@ private final class AskLimbaAction implements BudaConstants.ButtonListener {
 private final class SetupLimbaAction implements BudaConstants.ButtonListener {
 
    @Override public void buttonActivated(BudaBubbleArea bba,String id,Point pt) {
-      // create limba porperties bubble
+      BaitSetupBubble bbl = new BaitSetupBubble(); 
+      BoardLog.logD("BAIT","Create setup bubble " + bbl);
+      bba.addBubble(bbl,BudaBubblePosition.USERPOS,pt.x,pt.y);
     }
 
 }       // end of inner class SetupLimbaAction
