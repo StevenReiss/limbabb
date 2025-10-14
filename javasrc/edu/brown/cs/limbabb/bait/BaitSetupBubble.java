@@ -148,7 +148,7 @@ JComponent getSetupPanel()
 /*                                                                              */
 /********************************************************************************/
    
-private class StyleFileAction implements ActionListener {
+private final class StyleFileAction implements ActionListener {
    
    @Override public void actionPerformed(ActionEvent evt) {
       JTextField tf = (JTextField) evt.getSource();
@@ -166,7 +166,7 @@ private class StyleFileAction implements ActionListener {
 }       // end of inner class StlyeFioleAction
 
 
-private class ContextFileAction implements ActionListener {
+private final class ContextFileAction implements ActionListener {
    
    @Override public void actionPerformed(ActionEvent evt) {
       JTextField tf = (JTextField) evt.getSource();
@@ -184,7 +184,7 @@ private class ContextFileAction implements ActionListener {
 }       // end of inner class StlyeFioleAction
 
 
-private class CancelHandler implements ActionListener {
+private final class CancelHandler implements ActionListener {
    
    @Override public void actionPerformed(ActionEvent evt) {
       BaitSetupBubble.this.setVisible(false);
@@ -193,7 +193,7 @@ private class CancelHandler implements ActionListener {
 }       // end of inner class CancelHandler
 
 
-private class SaveHandler implements ActionListener {
+private final class SaveHandler implements ActionListener {
    
    @Override public void actionPerformed(ActionEvent evt) {
       BoardProperties bp = BoardProperties.getProperties("Bait");
@@ -218,7 +218,7 @@ private class SaveHandler implements ActionListener {
 
 
 
-private class UpdateHandler implements ActionListener {
+private final class UpdateHandler implements ActionListener {
 
    @Override public void actionPerformed(ActionEvent evt) {
       BaitFactory bf = BaitFactory.getFactory();
