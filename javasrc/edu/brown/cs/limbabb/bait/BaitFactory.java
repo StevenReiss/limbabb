@@ -60,7 +60,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.TreeSet;
 
 import javax.swing.AbstractAction;
 import javax.swing.JPopupMenu;
@@ -77,6 +79,7 @@ public final class BaitFactory implements BaitConstants, MintConstants
 
 private boolean server_running;
 private boolean server_started;
+private boolean valid_model;
 private Map<String,ResponseHandler> hdlr_map;
 
 private static BaitFactory the_factory = new BaitFactory();
@@ -129,7 +132,6 @@ public static void initialize(BudaRoot br)
 
 private void setupCallbacks() 
 {
-   BudaRoot.registerMenuButton("Bubble.AI.Ask Limba",new AskLimbaAction());
    BudaRoot.registerMenuButton("Bubble.AI.Set Limba Properties",new SetupLimbaAction());
    BaleFactory.getFactory().addContextListener(new BaitContexter());
 }
@@ -154,6 +156,7 @@ private BaitFactory()
    server_running = false;
    server_started = false;
    hdlr_map = new HashMap<>();
+   valid_model = false;
 
    BoardSetup bs = BoardSetup.getSetup();
    MintControl mc = bs.getMintControl();
@@ -186,6 +189,11 @@ private void start()
    if (bp.getBoolean("Bait.ollama.usecontext")) {
       issueCommand("PROJECT",null,"QUERY",null);
     }
+   String mdl = bp.getString("Bait.ollama.model");
+   if (mdl != null && !mdl.isEmpty()) {
+      Set<String> mdlist = getLlamaModels();
+      if (mdlist.contains(mdl)) noteModelSet();
+    }
 }
 
 
@@ -196,6 +204,7 @@ private boolean startLimba()
 {
    BoardSetup bs = BoardSetup.getSetup();
    MintControl mc = bs.getMintControl();
+   BoardProperties bp = BoardProperties.getProperties("Bait");
    
    if (BoardSetup.getSetup().getRunMode() == RunMode.CLIENT) {
       MintDefaultReply rply = new MintDefaultReply();
@@ -215,8 +224,6 @@ private boolean startLimba()
    IvyExec exec = null;
    File wd =  new File(bs.getDefaultWorkspace());
    File logf = new File(wd,"limba.log");
-   
-   BoardProperties bp = BoardProperties.getProperties("Bait");
    
    List<String> args = new ArrayList<>();
    
@@ -285,7 +292,7 @@ private boolean startLimba()
       args.add("-D");
     }
    String oh = bp.getProperty("Bait.ollama.host");
-   if (oh != null) {
+   if (oh != null && !oh.isEmpty()) {
       args.add("-host");
       args.add(oh);
     }
@@ -294,8 +301,13 @@ private boolean startLimba()
       args.add("-port");
       args.add(Integer.toString(op));
     }
+   String uh = bp.getProperty("Bait.ollama.usehost");
+   if (uh != null && !uh.isEmpty()) {
+      args.add("-usehost");
+      args.add(uh);
+    }
    String ah = bp.getProperty("Bait.ollama.althost");
-   if (ah != null) {
+   if (ah != null && !ah.isEmpty()) {
       args.add("-althost");
       args.add(ah);
     }
@@ -304,7 +316,12 @@ private boolean startLimba()
       args.add("-altport");
       args.add(Integer.toString(ap));
     }
-   String mdl = bp.getString("Bait.ollama.model",null);
+   String au = bp.getProperty("Bait.ollama.altusehost");
+   if (au != null && !au.isEmpty()) {
+      args.add("-altusehost");
+      args.add(au);
+    }  
+   String mdl = bp.getString("Bait.ollama.model");
    if (mdl != null && !mdl.isEmpty()) {
       args.add("-llama");
       args.add(mdl);
@@ -326,7 +343,7 @@ private boolean startLimba()
        }
       if (i == 0) {
 	 try {
-            // make IGNORE_OUTPUT to clean up otuput
+            // make IGNORE_OUTPUT to clean up otutput
             exec = new IvyExec(args,null,IvyExec.ERROR_OUTPUT);    
 	    BoardLog.logD("BAIT","Run " + exec.getCommand());
 	  }
@@ -408,6 +425,39 @@ private final class StartHandler implements MintHandler {
 
 }	 // end of inner class StartHandler
 
+
+/********************************************************************************/
+/*                                                                              */
+/*      Get list of models                                                      */
+/*                                                                              */
+/********************************************************************************/
+
+Set<String> getLlamaModels()
+{
+   Element mdls = sendLimbaMessage("LIST",null,null);
+   if (!IvyXml.isElement(mdls,"RESULT")) {
+      mdls = IvyXml.getChild(mdls,"RESULT");
+    }
+   Set<String> mdlist = new TreeSet<>();
+   for (Element mdl : IvyXml.children(mdls,"MODEL")) {
+      String mnm = IvyXml.getText(mdl);
+      if (mnm != null) {
+         mnm = mnm.trim();
+         if (mnm.contains("embed")) continue;
+         mdlist.add(mnm);
+       }
+    }
+   
+   return mdlist;
+}
+
+
+void noteModelSet()
+{
+   valid_model = true;
+   
+   BudaRoot.registerMenuButton("Bubble.AI.Ask Limba",new AskLimbaAction());
+}
 
 
 /********************************************************************************/
@@ -606,8 +656,6 @@ private boolean createTestCasesHandler(BaleContextConfig cfg)
 
 
 
-
-
 /********************************************************************************/
 /*                                                                              */
 /*      Action classes                                                          */
@@ -778,8 +826,6 @@ private class TestCaseClassAction extends AbstractAction {
 
 
 
-
-
 /********************************************************************************/
 /*                                                                              */
 /*      Editor context actions                                                  */
@@ -789,6 +835,8 @@ private class TestCaseClassAction extends AbstractAction {
 private final class BaitContexter implements BaleConstants.BaleContextListener {
    
    @Override public void addPopupMenuItems(BaleContextConfig cfg,JPopupMenu menu) {
+      if (!valid_model) return;
+      
       switch (cfg.getTokenType()) {
          case METHOD_DECL_ID :
             menu.add(new GenerateTestMethodAction(cfg));
@@ -810,10 +858,6 @@ private final class BaitContexter implements BaleConstants.BaleContextListener {
     }
 
 }	// end of inner class BucsContexter
-
-
-
-
 
 
 }      // end of class BaitFactory

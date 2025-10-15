@@ -27,7 +27,6 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 import java.util.Set;
-import java.util.TreeSet;
 
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
@@ -35,14 +34,11 @@ import javax.swing.JFileChooser;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
-import org.w3c.dom.Element;
-
 import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.bubbles.board.BoardProperties;
 import edu.brown.cs.bubbles.buda.BudaBubble;
 import edu.brown.cs.ivy.file.IvyFile;
 import edu.brown.cs.ivy.swing.SwingGridPanel;
-import edu.brown.cs.ivy.xml.IvyXml;
 
 class BaitSetupBubble extends BudaBubble implements BaitConstants
 {
@@ -87,21 +83,7 @@ BaitSetupBubble()
 JComponent getSetupPanel()
 {
    BaitFactory bf = BaitFactory.getFactory();
-   Element mdls = bf.sendLimbaMessage("LIST",null,null);
-   if (!IvyXml.isElement(mdls,"RESULT")) {
-      mdls = IvyXml.getChild(mdls,"RESULT");
-    }
-   Set<String> mdlist = new TreeSet<>();
-   String dflt = null;
-   for (Element mdl : IvyXml.children(mdls,"MODEL")) {
-      String mnm = IvyXml.getText(mdl);
-      if (mnm != null) {
-         mnm = mnm.trim();
-         if (mnm.contains("embed")) continue;
-         if (dflt != null) dflt = mnm;
-         mdlist.add(mnm);
-       }
-    }
+   Set<String> mdlist = bf.getLlamaModels(); 
    
    BoardProperties bp = BoardProperties.getProperties("Bait");
    
@@ -114,7 +96,12 @@ JComponent getSetupPanel()
    if (usrmdl != null && !mdlist.contains(usrmdl)) {
       usrmdl = null;
     }
-   if (usrmdl == null) usrmdl = dflt;
+   if (usrmdl == null) {
+      for (String mdl : mdlist) {
+         usrmdl = mdl;
+         break;
+       }
+    }
    
    if (mdlist.size() > 1) {
       model_chooser = pnl.addChoice("Model",mdlist,usrmdl,null);
@@ -224,7 +211,10 @@ private final class UpdateHandler implements ActionListener {
       BaitFactory bf = BaitFactory.getFactory();
       if (model_chooser != null) {
          String mdl = model_chooser.getItemAt(model_chooser.getSelectedIndex());
-         bf.sendLimbaMessage("SETMODEL",null,mdl);
+         if (mdl != null && !mdl.isEmpty()) {
+            bf.sendLimbaMessage("SETMODEL",null,mdl);
+            bf.noteModelSet(); 
+          }
        }
       String sty = style_area.getText();
       bf.sendLimbaMessage("STYLE",null,sty);

@@ -48,9 +48,13 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 
 import javax.imageio.ImageIO;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Segment;
 
 import org.w3c.dom.Element;
 
+import edu.brown.cs.bubbles.bale.BaleFactory;
+import edu.brown.cs.bubbles.bale.BaleConstants.BaleFileOverview;
 import edu.brown.cs.bubbles.batt.BattConstants.BattCallTest;
 import edu.brown.cs.bubbles.batt.BattConstants.BattTest;
 import edu.brown.cs.bubbles.board.BoardLog;
@@ -472,6 +476,32 @@ private void startContextFile(IvyXmlWriter xw)
     }
    if (pnm != null) xw.field("PACKAGE",pnm);
    if (cnm != null) xw.field("CLASS",cnm);
+
+   BumpClient bc = BumpClient.getBump();
+   List<BumpLocation>  imps = bc.findClassHeader(bump_location.getProject(),
+         bump_location.getFile(),null,false,true);
+   BaleFileOverview bf = BaleFactory.getFactory().getFileOverview(
+         bump_location.getProject(),
+         bump_location.getFile());
+   int maxp = 0;
+   for (BumpLocation imploc : imps) {
+      int epos = bf.mapOffsetToJava(imploc.getEndOffset());
+      if (epos > maxp) maxp = epos;
+    }
+   Segment s = new Segment();
+   try {
+      if (maxp > 0) {
+         bf.getText(0,maxp,s);
+       }
+    }
+   catch (BadLocationException e) { }
+   for (BumpLocation imploc : imps) {
+      int spos = bf.mapOffsetToJava(imploc.getOffset());
+      int epos = bf.mapOffsetToJava(imploc.getEndOffset());
+      if (spos < 0) continue;
+      String text = s.subSequence(spos,epos).toString().trim();
+      xw.textElement("IMPORT",text);
+    }
 
    // output imports ?
 
