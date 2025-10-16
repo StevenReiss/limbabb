@@ -26,6 +26,7 @@ import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.swing.AbstractAction;
 import javax.swing.JButton;
@@ -42,6 +43,7 @@ import org.w3c.dom.Element;
 
 import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.bubbles.buda.BudaBubble;
+import edu.brown.cs.ivy.mint.MintConstants.CommandArgs;
 import edu.brown.cs.ivy.swing.SwingGridPanel;
 import edu.brown.cs.ivy.xml.IvyXml;
 
@@ -58,11 +60,11 @@ class BaitChatBubble extends BudaBubble implements BaitConstants
 private JButton         submit_button;
 private JEditorPane     input_area;
 private JEditorPane     log_pane;
-private String          prior_queries;
 private boolean         use_context;
+private String          history_id;
 
 private static final long serialVersionUID = 1;
-
+private static AtomicInteger history_counter = new AtomicInteger();
 
 
 /********************************************************************************/
@@ -76,12 +78,19 @@ BaitChatBubble()
    submit_button = null;
    input_area = null;
    log_pane = null;
-   prior_queries = null;
-   use_context = false;
+   use_context = true;
+   history_id = "LIMBA_CHAT_" + history_counter.incrementAndGet();
    
    JComponent pnl = getChatPanel();
    setContentPane(pnl);
 }
+
+
+@Override protected void localDispose()
+{
+   // remove chat history
+}
+
 
 
 /********************************************************************************/
@@ -225,7 +234,8 @@ private final class ClearContextAction extends AbstractAction {
     }
    
    @Override public void actionPerformed(ActionEvent e) {
-      prior_queries = null;
+      BaitFactory bf = BaitFactory.getFactory();
+      bf.sendLimbaMessage("CLEAR",new CommandArgs("ID",history_id),null);
     }
    
 }       // end of inner class ClearContextAction
@@ -238,16 +248,14 @@ private final class SubmitAction implements ActionListener {
       String text = input_area.getText();
       if (text.isBlank()) return;
       String query = text;
-      if (use_context && prior_queries != null && !prior_queries.isEmpty()) {
-         query = "Recall our past conversation:<<<<\n" + prior_queries + "\n<<<<\n\n" + text;
+      CommandArgs args = null;
+      if (use_context) {
+         args = new CommandArgs("ID",history_id);
        }
-      BaitFactory.getFactory().issueCommand("QUERY",null,query,new Responder());  
+      BaitFactory.getFactory().issueCommand("QUERY",args,query,new Responder());  
       String disp = "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" + text + 
             "</font></p></div>";
       appendOutput(disp);
-      
-      if (prior_queries == null) prior_queries = text;
-      else prior_queries += "\n\n-------------------------\n" + text;
     }
    
 }       // end of inner class SubmitAction
@@ -266,9 +274,6 @@ private final class Responder implements ResponseHandler {
                IvyXml.convertXmlToString(rslt));
          text = "???";
        }
-      if (prior_queries !=  null) {
-         prior_queries += "RESPONSE:>>>>\n" + text + ">>>>\n";
-       }
       
       text = formatText(text);
       String disp = "<div align='left'><p><font color='black'>" + text +
@@ -277,6 +282,8 @@ private final class Responder implements ResponseHandler {
     }
    
 }       // end of inner class ResponseAction
+
+
 
 }       // end of class BaitChatBubble
 

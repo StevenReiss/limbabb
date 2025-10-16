@@ -192,6 +192,7 @@ private final class SaveHandler implements ActionListener {
       bp.setProperty("Bait.ollama.style",sty);
       String ctx = context_area.getText();
       bp.setProperty("Bait.ollama.context",ctx);
+      
       try {
          bp.save();
        }

@@ -189,10 +189,23 @@ private void start()
    if (bp.getBoolean("Bait.ollama.usecontext")) {
       issueCommand("PROJECT",null,"QUERY",null);
     }
-   String mdl = bp.getString("Bait.ollama.model");
+   initialCommands();
+}
+
+private void initialCommands()
+{
+   String mdl = getProjectProperty("Bait.ollama.model");
    if (mdl != null && !mdl.isEmpty()) {
       Set<String> mdlist = getLlamaModels();
       if (mdlist.contains(mdl)) noteModelSet();
+    }
+   String sty = getProjectProperty("Bait.ollama.style");
+   if (sty != null && !sty.isEmpty()) {
+      sendLimbaMessage("STYLE",null,sty);
+    }
+   String ctx = getProjectProperty("Bait.ollama.context");
+   if (ctx != null && !ctx.isEmpty()) {
+      sendLimbaMessage("CONTEXT",null,ctx);
     }
 }
 
@@ -410,14 +423,7 @@ private final class StartHandler implements MintHandler {
    @Override public void receive(MintMessage msg,MintArguments args) {
       boolean sts = startLimba();
       if (sts) {
-        String sty = getProjectProperty("Bait.ollama.style");
-        if (sty != null) {
-           sendLimbaMessage("STYLE",null,sty);
-         }
-        String ctx = getProjectProperty("Bait.ollama.context");
-        if (ctx != null) {
-           sendLimbaMessage("CONTEXT",null,ctx);
-         }
+         initialCommands();
        }
       if (sts) msg.replyTo("<RESULT VALUE='true'/>");
       else msg.replyTo("<RESULT VALUE='false' />");

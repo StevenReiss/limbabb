@@ -285,10 +285,13 @@ void setupSearchContext(IvyXmlWriter xw)
       
       // skip standard java libraries
       if (onm.contains("/jdk") || onm.contains("\\jdk") ||
-	    onm.contains("/jre") || onm.contains("\\jre")) continue;
+            onm.contains("/jrt-fs") || onm.contains("\\jrt-fs") ||
+            onm.contains("/jre") || onm.contains("\\jre")) continue;
       if (onm.contains("JavaVirtualMachines")) continue;
+      if (onm.contains("-openjdk-")) continue;
       if (onm.startsWith("/System/Library/Java")) continue;
       if (onm.endsWith("/junit.jar") || onm.endsWith("\\junit.jar")) continue;
+      if (onm.endsWith("/poppy.jar") || onm.endsWith("\\poppy.jar")) continue;
       if (onm.contains("/eclipse/plugins/org.") || onm.contains("\\eclipse\\plugins\\org.")) continue;
       BoardLog.logD("BAIT","Add context library " + onm);
       
