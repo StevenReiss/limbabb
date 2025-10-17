@@ -345,7 +345,7 @@ private boolean startLimba()
       server_started = true;
     }
    
-   for (int i = 0; i < 100; ++i) {
+   for (int i = 0; i < 500; ++i) {
       MintDefaultReply rply = new MintDefaultReply();
       mc.send("<LIMBA DO='PING' />",rply,MINT_MSG_FIRST_NON_NULL);
       String rslt = rply.waitForString(1000);
