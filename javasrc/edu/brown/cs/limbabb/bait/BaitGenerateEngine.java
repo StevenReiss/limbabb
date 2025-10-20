@@ -83,6 +83,7 @@ private List<BattCallTest> test_cases;
 private List<BattTest>	user_tests;
 private List<BaitUserFile> data_files;
 private String		test_code;
+private String          code_description;
 
 
 
@@ -99,6 +100,7 @@ BaitGenerateEngine(BumpLocation loc)
    test_cases = null;
    user_tests = null;
    test_code = null;
+   code_description = null;
    data_files = null;
    context_flag = false;
 }
@@ -114,7 +116,11 @@ void setDescription(String d)			{ generate_description = d; }
 
 void setTestCases(List<BattCallTest> t) 	{ test_cases = t; }
 
-void setTestCode(String cd)			{ test_code = cd; }
+void setTestCode(String cd,String desc)			
+{ 
+   test_code = cd; 
+   code_description = desc;
+}
 
 void setUserTest(List<BattTest> t)		{ user_tests = t; }
 
@@ -195,7 +201,6 @@ private String createGenerateRequest()
       methodname = methodname.substring(idx+1);
     }
     
-    
    BoardProperties bp = BoardProperties.getProperties("Bait");
    
    IvyXmlWriter xw = new IvyXmlWriter();
@@ -216,6 +221,7 @@ private String createGenerateRequest()
 	 xw.begin("TESTCASE");
 	 xw.field("NAME","TEST_" + (++ctr));
 	 xw.field("TYPE","CALLS");
+         xw.textElement("DESCRIPTION",bct.getTestDescription());          
 	 xw.begin("CALL");
 	 xw.field("METHOD",methodname);
 	 xw.field("OP",bct.getTestOpName());
@@ -233,6 +239,7 @@ private String createGenerateRequest()
       xw.begin("TESTCASE");
       xw.field("NAME", "TEST_" + (++ctr));
       xw.field("TYPE","USERCODE");
+      xw.textElement("DESCRIPTION",code_description);
       xw.cdataElement("CODE",test_code);
       xw.end("TESTCASE");
     }
@@ -244,6 +251,7 @@ private String createGenerateRequest()
 	 xw.field("CLASS",bt.getClassName());
 	 xw.field("METHOD",bt.getMethodName());
 	 xw.field("TESTNAME",bt.getMethodName() + "(" + bt.getClassName() + ")");
+         xw.textElement("DESCRIPTION","Test " + bt.getName());
 	 xw.end("TESTCASE");
        }
     }

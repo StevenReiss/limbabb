@@ -339,7 +339,7 @@ private void doGenerate()
             eng.setTestCases(iotest_panel.getActiveTests());
             break;
          case USER_TEST :
-            eng.setTestCode(user_panel.getTestCode());
+            eng.setTestCode(user_panel.getTestCode(),user_panel.getDescription());
             break;
          case TEST_CASES :
             // eng.setTestCode(case_panel.getTestCode());
@@ -472,7 +472,8 @@ private void scanForPrompt()
 }
 
 
-/********************************************************************************/
+
+   /********************************************************************************/
 /*										*/
 /*	Test case panel 							*/
 /*										*/
@@ -482,7 +483,6 @@ private class TestCasePanel implements ListSelectionListener {
    
    private JList<BattTest> list_component;
    private JScrollPane scroll_pane;
-   
    TestCasePanel(Collection<BattTest> tests) {
       Vector<BattTest> vd = new Vector<BattTest>(tests);
       list_component = new JList<BattTest>(vd);
@@ -536,7 +536,9 @@ private class TestCasePanel implements ListSelectionListener {
 
 private class UserCodePanel implements CaretListener {
    
+   private SwingGridPanel code_panel;
    private JTextArea	code_area;
+   private JTextField   description_area;
    private JScrollPane	scroll_pane;
    
    UserCodePanel() {
@@ -544,15 +546,26 @@ private class UserCodePanel implements CaretListener {
       code_area.setWrapStyleWord(true);
       code_area.addCaretListener(this);
       scroll_pane = new JScrollPane(code_area);
+      code_panel = new SwingGridPanel();
+      code_panel.beginLayout();
+      description_area = code_panel.addTextField("Description",
+            null,null,null);
+      code_panel.addRawComponent("Code",scroll_pane);
     }
    
-   JComponent getComponent()		{ return scroll_pane; }
+   JComponent getComponent()		{ return code_panel; }
    
    String getTestCode() {
       return code_area.getText().trim();
     }
    
+   String getDescription() {
+      return description_area.getText().trim();
+    }
+   
    boolean validate() {
+      String d = description_area.getText();
+      if (d.length() < 4) return false;
       String txt = code_area.getText();
       if (txt.length() < 4) return false;
       return true;
