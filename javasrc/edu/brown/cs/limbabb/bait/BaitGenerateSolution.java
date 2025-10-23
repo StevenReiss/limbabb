@@ -37,6 +37,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.StreamTokenizer;
 import java.io.StringReader;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -166,8 +167,15 @@ private String computeSummary()
    
    List<String> decls = getDeclarations(for_result.getCode());
    
+   NumberFormat scorefmt = NumberFormat.getInstance();
+   scorefmt.setMaximumFractionDigits(1);
+   String score = scorefmt.format(for_result.getScore()*10) + " / 10";  
+   
    buf.append("<html><body>\n");
    buf.append("<table>\n");
+   buf.append("<tr><td>Score:</td><td>");
+   buf.append(score);
+   buf.append("</td></tr>\n");
    buf.append("<tr><td>Size:</td><td>");
    buf.append(for_result.getNumLines());
    buf.append(" lines, ");

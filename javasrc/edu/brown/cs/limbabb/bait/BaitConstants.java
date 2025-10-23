@@ -51,6 +51,7 @@ interface BaitGenerateResult {
    String getCode();
    int getNumLines();
    int getCodeSize();
+   double getScore();
 }
 
 interface BaitGenerateInput {

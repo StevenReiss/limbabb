@@ -669,6 +669,7 @@ private static class LimbaGenerateResult implements BaitGenerateResult {
    private String result_code;
    private int	  result_lines;
    private int	  result_size;
+   private double result_score;
 
    LimbaGenerateResult(Element xml) {
       result_name = IvyXml.getTextElement(xml,"NAME");
@@ -676,12 +677,14 @@ private static class LimbaGenerateResult implements BaitGenerateResult {
       Element comp = IvyXml.getChild(xml,"COMPLEXITY");
       result_lines = IvyXml.getAttrInt(comp,"LINES");
       result_size = IvyXml.getAttrInt(comp,"CODE");
+      result_score = IvyXml.getAttrInt(comp,"SCORE");
     }
 
    @Override public String getResultName()	{ return result_name; }
    @Override public String getCode()		{ return result_code; }
    @Override public int getNumLines()		{ return result_lines; }
    @Override public int getCodeSize()		{ return result_size; }
+   @Override public double getScore()           { return result_score; } 
 
 }	// end of inner class SearchResult
 
