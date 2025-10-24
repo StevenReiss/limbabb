@@ -23,6 +23,7 @@ package edu.brown.cs.limbabb.bait;
 
 import edu.brown.cs.bubbles.bale.BaleConstants;
 import edu.brown.cs.bubbles.bale.BaleFactory;
+import edu.brown.cs.bubbles.batt.BattFactory;
 import edu.brown.cs.bubbles.bale.BaleConstants.BaleContextConfig;
 import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.bubbles.board.BoardPluginManager;
@@ -646,17 +647,23 @@ private boolean createJavadocHandler(BaleContextConfig cfg)
 }
 
 
-private boolean createTestCasesHandler(BaleContextConfig cfg)
+private boolean createTestCasesHandler(BaleContextConfig cfg,boolean method,
+      String incls,boolean newcls)
 {
-   String mnm = cfg.getMethodName();
-   if (mnm == null) return false;
-   
-   List<BumpLocation> locs = BumpClient.getBump().findMethod(null,mnm,false);
-   if (locs == null || locs.size() == 0) return false;
-   BumpLocation loc = locs.get(0);
+   BumpLocation loc = null;
+   if (method) {
+      String mnm = cfg.getMethodName();
+      if (mnm == null) return false;
+      List<BumpLocation> locs = BumpClient.getBump().findMethod(null,mnm,false);
+      if (locs == null || locs.size() == 0) return false;
+      loc = locs.get(0);
+    }
    IvyLog.logD("LIMBA","Create test cases for " + loc);
-// BaitJavaDocer bjd = new BaitJavaDocer(loc);
-// bjd.process(); 
+   if (loc == null) return false;
+   
+   BaitTestGenerator bjd = new BaitTestGenerator(loc,incls,newcls); 
+   bjd.process(); 
+   
    return true;
 }
 
@@ -799,15 +806,20 @@ private class JavadocClassAction extends AbstractAction {
 private class TestCaseMethodAction extends AbstractAction {
    
    private transient BaleContextConfig start_config;
+   private String in_class;
+   private boolean create_class;
+   
    private static final long serialVersionUID = 1;
    
-   TestCaseMethodAction(BaleContextConfig cfg) {
+   TestCaseMethodAction(BaleContextConfig cfg,String cls,boolean newcls) {
       super("Generate Test Cases for Method");
       start_config = cfg;
+      in_class = cls;
+      create_class = newcls;
     }
    
    @Override public void actionPerformed(ActionEvent e) {
-      createTestCasesHandler(start_config);
+      createTestCasesHandler(start_config,true,in_class,create_class);
     }
 
 }       // end of inner class TestCaseMethodAction
@@ -816,16 +828,14 @@ private class TestCaseMethodAction extends AbstractAction {
 
 private class TestCaseClassAction extends AbstractAction {
    
-   private transient BaleContextConfig start_config;
    private static final long serialVersionUID = 1;
    
    TestCaseClassAction(BaleContextConfig cfg) {
       super("Generate Test Cases for Class");
-      start_config = cfg;
     }
    
    @Override public void actionPerformed(ActionEvent e) {
-      createTestCasesHandler(start_config);
+//    createTestCasesHandler(start_config,false,null,false);
     }
    
 }       // end of inner class TestCaseClassction
@@ -843,12 +853,23 @@ private final class BaitContexter implements BaleConstants.BaleContextListener {
    @Override public void addPopupMenuItems(BaleContextConfig cfg,JPopupMenu menu) {
       if (!valid_model) return;
       
+      String pnm = cfg.getEditor().getContentProject();
+      
       switch (cfg.getTokenType()) {
          case METHOD_DECL_ID :
             menu.add(new GenerateTestMethodAction(cfg));
             menu.add(new GenerateMethodAction(cfg));
             menu.add(new JavadocMethodAction(cfg));
-            menu.add(new TestCaseMethodAction(cfg));
+            Set<String> classes = new TreeSet<>();
+            String mthd = cfg.getMethodName();
+            String tcnm = BattFactory.getFactory().findTestClasses(pnm,
+                  null,mthd,classes);
+            for (String c : classes) {
+               menu.add(new TestCaseMethodAction(cfg,c,false));
+             }
+            if (!classes.contains(tcnm)) {
+               menu.add(new TestCaseMethodAction(cfg,tcnm,true));
+             }
             break;
          case CLASS_DECL_ID :
          case TYPE_ID :
