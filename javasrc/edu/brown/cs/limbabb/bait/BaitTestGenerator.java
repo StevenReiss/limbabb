@@ -23,6 +23,7 @@
 package edu.brown.cs.limbabb.bait;
 
 import java.io.File;
+import java.util.List;
 
 import javax.swing.text.BadLocationException;
 
@@ -31,6 +32,7 @@ import org.w3c.dom.Element;
 import edu.brown.cs.bubbles.bale.BaleConstants;
 import edu.brown.cs.bubbles.bale.BaleFactory;
 import edu.brown.cs.bubbles.board.BoardLog;
+import edu.brown.cs.bubbles.bump.BumpClient;
 import edu.brown.cs.bubbles.bump.BumpLocation;
 import edu.brown.cs.ivy.file.IvyLog;
 import edu.brown.cs.ivy.mint.MintConstants.CommandArgs;
@@ -50,7 +52,6 @@ class BaitTestGenerator implements BaitConstants, BaitConstants.ResponseHandler
 private BumpLocation    bump_location;
 private String          context_contents;
 private String          insert_class;
-private boolean         new_class;
 
 
 
@@ -60,11 +61,10 @@ private boolean         new_class;
 /*                                                                              */
 /********************************************************************************/
 
-BaitTestGenerator(BumpLocation loc,String incls,boolean newcls)
+BaitTestGenerator(BumpLocation loc,String incls)
 {
    bump_location = loc;
    insert_class = incls;
-   new_class = newcls;
    context_contents = null;
    getContents();
 }
@@ -78,11 +78,24 @@ BaitTestGenerator(BumpLocation loc,String incls,boolean newcls)
 
 void process()
 {
+   String proj = bump_location.getProject();
+   BumpClient bc = BumpClient.getBump();
+   List<BumpLocation> clocs = bc.findTypes(proj,insert_class);
+   BumpLocation cloc = null;
+   if (clocs != null) {
+      for (BumpLocation bl : clocs) {
+         String nm = bl.getSymbolName();
+         if (nm.equals(insert_class)) {
+            cloc = bl;
+            break;
+          }
+       }
+    }
+   
    String body = null;
    try (IvyXmlWriter xw = new IvyXmlWriter()) {
       xw.begin("TOTEST");
       xw.field("TARGETCLASS",insert_class);
-      xw.field("NEWCLASS",new_class);
       String what = "METHOD";
       switch (bump_location.getSymbolType()) {
          case ANNOTATION :
@@ -99,6 +112,12 @@ void process()
        }
       xw.field("SOURCETYPE",what);
       xw.field("SOURCEFILE",bump_location.getFile());
+      if (cloc != null) {
+         xw.field("TARGETFILE",cloc.getFile());
+       }
+      else {
+         xw.field("NEW",true);
+       }
       xw.cdataElement("CODE",context_contents);
       xw.end("TOTEST");
       body = xw.toString();
@@ -115,6 +134,8 @@ void process()
    IvyLog.logD("BAIT","Received tests: " + 
          IvyXml.convertXmlToString(rslt));
 }
+
+
 
 /********************************************************************************/
 /*                                                                              */

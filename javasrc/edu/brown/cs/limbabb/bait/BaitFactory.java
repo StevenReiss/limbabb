@@ -48,6 +48,8 @@ import edu.brown.cs.ivy.mint.MintControl;
 import edu.brown.cs.ivy.mint.MintDefaultReply;
 import edu.brown.cs.ivy.mint.MintHandler;
 import edu.brown.cs.ivy.mint.MintMessage;
+import edu.brown.cs.ivy.swing.SwingComboBox;
+import edu.brown.cs.ivy.swing.SwingGridPanel;
 import edu.brown.cs.ivy.xml.IvyXml;
 import edu.brown.cs.ivy.xml.IvyXmlWriter;
 
@@ -55,6 +57,7 @@ import org.w3c.dom.Element;
 
 import java.awt.Point;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -66,6 +69,7 @@ import java.util.StringTokenizer;
 import java.util.TreeSet;
 
 import javax.swing.AbstractAction;
+import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 
 public final class BaitFactory implements BaitConstants, MintConstants
@@ -647,8 +651,7 @@ private boolean createJavadocHandler(BaleContextConfig cfg)
 }
 
 
-private boolean createTestCasesHandler(BaleContextConfig cfg,boolean method,
-      String incls,boolean newcls)
+private boolean createTestCasesHandler(BaleContextConfig cfg,boolean method)
 {
    BumpLocation loc = null;
    if (method) {
@@ -658,13 +661,62 @@ private boolean createTestCasesHandler(BaleContextConfig cfg,boolean method,
       if (locs == null || locs.size() == 0) return false;
       loc = locs.get(0);
     }
-   IvyLog.logD("LIMBA","Create test cases for " + loc);
+   
+   TestResultPanel pnl = new TestResultPanel(cfg);
+   int sts = JOptionPane.showOptionDialog(cfg.getEditor(),pnl,
+         "Generate Tests for " + cfg.getMethodName(),
+         JOptionPane.OK_CANCEL_OPTION,
+         JOptionPane.PLAIN_MESSAGE,null,null,null);
+   if (sts != JOptionPane.OK_OPTION) return false;
+   String cnm = pnl.getTargetClass();
+   if (cnm == null || cnm.isEmpty()) return false;
+   
+   IvyLog.logD("LIMBA","Create test cases for " + loc + " into " + cnm);
    if (loc == null) return false;
    
-   BaitTestGenerator bjd = new BaitTestGenerator(loc,incls,newcls); 
+   BaitTestGenerator bjd = new BaitTestGenerator(loc,cnm); 
    bjd.process(); 
    
    return true;
+}
+
+
+private class TestResultPanel extends SwingGridPanel 
+{
+   private SwingComboBox<String> class_field;
+   private String default_class;
+   
+   private static final long serialVersionUID = 1;
+   
+   TestResultPanel(BaleContextConfig cfg) {
+      String pnm = cfg.getEditor().getContentProject();
+      String mthd = cfg.getMethodName();
+      Set<String> classes = new TreeSet<>();
+      String tcnm = BattFactory.getFactory().findTestClasses(pnm,
+            null,mthd,classes);
+      default_class = tcnm;
+      if (tcnm != null && !classes.contains(tcnm)) {
+         tcnm += " (NEW)";
+         classes.add(tcnm);
+       }
+      beginLayout();
+      class_field = addChoice("Target Class",classes,tcnm,null);
+      class_field.setEditable(true);
+    }
+   
+   String getTargetClass() {
+      String v = (String) class_field.getSelectedItem();
+      if (v == null) return null;
+      v = v.replace("(NEW)","");
+      v = v.trim();
+      // might want to ensure package matches configuration
+      if (!v.contains(".") && default_class != null) {
+         int idx = default_class.lastIndexOf(".");
+         if (idx > 0) v = default_class.substring(idx+1) + v;
+       }
+      return v;
+    }
+   
 }
 
 
@@ -811,15 +863,13 @@ private class TestCaseMethodAction extends AbstractAction {
    
    private static final long serialVersionUID = 1;
    
-   TestCaseMethodAction(BaleContextConfig cfg,String cls,boolean newcls) {
+   TestCaseMethodAction(BaleContextConfig cfg) {
       super("Generate Test Cases for Method");
       start_config = cfg;
-      in_class = cls;
-      create_class = newcls;
     }
    
    @Override public void actionPerformed(ActionEvent e) {
-      createTestCasesHandler(start_config,true,in_class,create_class);
+      createTestCasesHandler(start_config,true);
     }
 
 }       // end of inner class TestCaseMethodAction
@@ -860,16 +910,17 @@ private final class BaitContexter implements BaleConstants.BaleContextListener {
             menu.add(new GenerateTestMethodAction(cfg));
             menu.add(new GenerateMethodAction(cfg));
             menu.add(new JavadocMethodAction(cfg));
-            Set<String> classes = new TreeSet<>();
-            String mthd = cfg.getMethodName();
-            String tcnm = BattFactory.getFactory().findTestClasses(pnm,
-                  null,mthd,classes);
-            for (String c : classes) {
-               menu.add(new TestCaseMethodAction(cfg,c,false));
-             }
-            if (!classes.contains(tcnm)) {
-               menu.add(new TestCaseMethodAction(cfg,tcnm,true));
-             }
+            menu.add(new TestCaseMethodAction(cfg));
+//          Set<String> classes = new TreeSet<>();
+//          String mthd = cfg.getMethodName();
+//          String tcnm = BattFactory.getFactory().findTestClasses(pnm,
+//                null,mthd,classes);
+//          for (String c : classes) {
+//             menu.add(new TestCaseMethodAction(cfg,c,false));
+//           }
+//          if (!classes.contains(tcnm)) {
+//             menu.add(new TestCaseMethodAction(cfg,tcnm,true));
+//           }
             break;
          case CLASS_DECL_ID :
          case TYPE_ID :
