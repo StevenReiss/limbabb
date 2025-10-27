@@ -57,7 +57,6 @@ import org.w3c.dom.Element;
 
 import java.awt.Point;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -858,8 +857,6 @@ private class JavadocClassAction extends AbstractAction {
 private class TestCaseMethodAction extends AbstractAction {
    
    private transient BaleContextConfig start_config;
-   private String in_class;
-   private boolean create_class;
    
    private static final long serialVersionUID = 1;
    
@@ -903,14 +900,13 @@ private final class BaitContexter implements BaleConstants.BaleContextListener {
    @Override public void addPopupMenuItems(BaleContextConfig cfg,JPopupMenu menu) {
       if (!valid_model) return;
       
-      String pnm = cfg.getEditor().getContentProject();
-      
       switch (cfg.getTokenType()) {
          case METHOD_DECL_ID :
             menu.add(new GenerateTestMethodAction(cfg));
             menu.add(new GenerateMethodAction(cfg));
             menu.add(new JavadocMethodAction(cfg));
             menu.add(new TestCaseMethodAction(cfg));
+//          String pnm = cfg.getEditor().getContentProject();
 //          Set<String> classes = new TreeSet<>();
 //          String mthd = cfg.getMethodName();
 //          String tcnm = BattFactory.getFactory().findTestClasses(pnm,
