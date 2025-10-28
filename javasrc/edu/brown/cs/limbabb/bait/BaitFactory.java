@@ -136,7 +136,7 @@ public static void initialize(BudaRoot br)
 
 private void setupCallbacks() 
 {
-   BudaRoot.registerMenuButton("Bubble.AI.Set Limba Properties",new SetupLimbaAction());
+   BudaRoot.registerMenuButton("Bubble.Smart Asst.Set Limba Properties",new SetupLimbaAction());
    BaleFactory.getFactory().addContextListener(new BaitContexter());
 }
 
@@ -466,7 +466,7 @@ void noteModelSet()
 {
    valid_model = true;
    
-   BudaRoot.registerMenuButton("Bubble.AI.Ask Limba",new AskLimbaAction());
+   BudaRoot.registerMenuButton("Bubble.Smart Asst.Ask Limba",new AskLimbaAction());
 }
 
 

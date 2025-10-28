@@ -704,12 +704,12 @@ private static class LimbaUIResult implements BaitGenerateInput {
       byte [] img = Base64.getDecoder().decode(src);
       ByteArrayInputStream bas = new ByteArrayInputStream(img);
       try {
-	 user_image = ImageIO.read(bas);
+         user_image = ImageIO.read(bas);
        }
       catch (IOException e) {
-	 BoardLog.logE("BAIT","Problem converting image",e);
+         BoardLog.logE("BAIT","Problem converting image",e);
        }
-
+   
       // jar_string = IvyXml.getTextElement(xml,"RUNJAR");
     }
 

@@ -89,7 +89,7 @@ JComponent getSetupPanel()
    
    SwingGridPanel pnl = new SwingGridPanel();
    pnl.beginLayout();
-   pnl.addBannerLabel("LIMBA (AI) Setup Panel");
+   pnl.addBannerLabel("LIMBA Smart Assistant Setup Panel");
    pnl.addSeparator();
    
    String usrmdl = bp.getProperty("Bait.ollama.model");
