@@ -211,6 +211,9 @@ private void initialCommands()
    if (ctx != null && !ctx.isEmpty()) {
       sendLimbaMessage("CONTEXT",null,ctx);
     }
+   
+   // issue dummy command to load context
+   issueCommand("QUERY",null,"Who are you?",null);
 }
 
 

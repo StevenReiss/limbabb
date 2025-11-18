@@ -147,10 +147,6 @@ void process()
       BuenoLocation cloc = bf.createLocation(bump_location.getProject(),
             insert_class,null,false);
       BuenoProperties bp = loadFileProperties(rslt);
-//    BuenoProperties bp = new BuenoProperties();
-//    bp.put(BuenoKey.KEY_NAME,insert_class);
-//    String ctxt = IvyXml.getTextElement(rslt,"TESTCODE");
-//    bp.put(BuenoKey.KEY_FULLTEXT,ctxt);
       bf.createNew(BuenoType.NEW_CLASS,cloc,bp);
     }
    else {
@@ -179,8 +175,16 @@ private BuenoProperties loadFileProperties(Element xml)
    bp.put(BuenoKey.KEY_PACKAGE,pnm);
    bp.put(BuenoKey.KEY_NAME,cnm);
    
+   for (Element impelt : IvyXml.children(xml,"IMPORT")) {
+      String typ = IvyXml.getText(impelt);
+      boolean isstatic = IvyXml.getAttrBool(impelt,"STATIC");
+      String imp = "import " + (isstatic ? "static " : "") + typ + ";";
+      bp.addToArrayProperty(BuenoKey.KEY_IMPORTS,imp);
+    }
+   
    Element topxml = IvyXml.getChild(xml,"TOP");
    bp.put(BuenoKey.KEY_MODIFIERS,IvyXml.getAttrInt(topxml,"MODINT"));
+  
    String sup = IvyXml.getTextElement(xml,"SUPERCLASS");
    if (sup != null) {
       bp.addToArrayProperty(BuenoKey.KEY_EXTENDS,sup);
@@ -188,12 +192,19 @@ private BuenoProperties loadFileProperties(Element xml)
    for (String s : IvyXml.getTextElements(xml,"IMPLEMENTS")) {
       bp.addToArrayProperty(BuenoKey.KEY_IMPLEMENTS,s);
     }
+   
    String jdoc = IvyXml.getTextElement(topxml,"JAVADOC");
    if (jdoc != null) {
       bp.put(BuenoKey.KEY_COMMENT,jdoc);
       bp.put(BuenoKey.KEY_ADD_JAVADOC,true);
     }
-   bp.put(BuenoKey.KEY_CONTENTS,IvyXml.getTextElement(topxml,"CONTENTS"));
+   
+   String cnts = IvyXml.getTextElement(topxml,"CONTENTS");
+   if (cnts.startsWith("{")) {
+      int idx1 = cnts.lastIndexOf("}");
+      cnts = cnts.substring(2,idx1).trim();
+    }
+   bp.put(BuenoKey.KEY_CONTENTS,cnts);
    
    return bp;
 }
@@ -216,23 +227,91 @@ private void addImport(Element impelt)
 private void addDeclaration(Element dclelt)
 {
    BuenoProperties bp = new BuenoProperties();
+   
+   // add common propertires
    String nm = IvyXml.getAttrString(dclelt,"NAME");
    bp.put(BuenoKey.KEY_NAME,nm);
+   String jdoc = IvyXml.getTextElement(dclelt,"JAVADOC");
+   if (jdoc != null) {
+      bp.put(BuenoKey.KEY_COMMENT,jdoc);
+      bp.put(BuenoKey.KEY_ADD_JAVADOC,true);
+    }
+   String attr = IvyXml.getTextElement(dclelt,"ATTRIBUTES");
+   if (attr != null && !attr.isEmpty()) bp.put(BuenoKey.KEY_ATTRIBUTES,attr);
+   bp.put(BuenoKey.KEY_MODIFIERS,IvyXml.getAttrInt(dclelt,"MODINT",0));
+   String typ = IvyXml.getTextElement(dclelt,"RETURNS");
+   bp.put(BuenoKey.KEY_RETURNS,typ);
+   
+// String ctxt = IvyXml.getTextElement(dclelt,"RAWCODE");
+// bp.put(BuenoKey.KEY_FULLTEXT,ctxt);
+   
    BuenoFactory bf = BuenoFactory.getFactory();
    BuenoLocation cloc = bf.createLocation(bump_location.getProject(),
          insert_class,null,true);
-   String ctxt = IvyXml.getTextElement(dclelt,"RAWCODE");
-   bp.put(BuenoKey.KEY_FULLTEXT,ctxt);
    if (IvyXml.getAttrBool(dclelt,"FIELD")) {
+      loadFieldProps(dclelt,bp);
       bf.createNew(BuenoType.NEW_FIELD,cloc,bp);
     }
    else if (IvyXml.getAttrBool(dclelt,"INNERTYPE")) {
+      loadTypeProps(dclelt,bp);
       bf.createNew(BuenoType.NEW_INNER_CLASS,cloc,bp);
     }
    else {
+      loadMethodProps(dclelt,bp);
       bf.createNew(BuenoType.NEW_METHOD,cloc,bp);
     }
 }
+
+
+private void loadFieldProps(Element xml,BuenoProperties bp)
+{
+   String init = IvyXml.getTextElement(xml,"INIT");
+   if (init != null && !init.isEmpty()) {
+      bp.put(BuenoKey.KEY_INITIAL_VALUE,init);
+    }
+}
+
+
+private void loadMethodProps(Element xml,BuenoProperties bp)
+{
+   String s = IvyXml.getTextElement(xml,"PARAMETERS");
+   bp.put(BuenoKey.KEY_PARAMETERS,s);
+   String cnts = IvyXml.getTextElement(xml,"CONTENTS");
+   if (cnts != null && !cnts.isEmpty()) {
+      cnts = cnts.trim();
+      if (cnts.startsWith("{")) {
+         int idx1 = cnts.lastIndexOf("}");
+         cnts = cnts.substring(2,idx1).trim();
+       }
+      bp.put(BuenoKey.KEY_CONTENTS,cnts);
+    }
+}
+
+
+private void loadTypeProps(Element xml,BuenoProperties bp)
+{
+   String what = "class";
+   if (IvyXml.getAttrBool(xml,"INTERFACE")) what = "interface";
+   bp.put(BuenoKey.KEY_TYPE,what);
+   
+   String sup = IvyXml.getTextElement(xml,"SUPERCLASS");
+   if (sup != null) {
+      bp.addToArrayProperty(BuenoKey.KEY_EXTENDS,sup);
+    }
+   for (String s : IvyXml.getTextElements(xml,"IMPLEMENTS")) {
+      bp.addToArrayProperty(BuenoKey.KEY_IMPLEMENTS,s);
+    }
+   String cnts = IvyXml.getTextElement(xml,"CONTENTS");
+   if (cnts != null && !cnts.isEmpty()) {
+      cnts = cnts.trim();
+      if (cnts.startsWith("{")) {
+         int idx1 = cnts.lastIndexOf("}");
+         cnts = cnts.substring(2,idx1).trim();
+       }
+      bp.put(BuenoKey.KEY_CONTENTS,cnts);
+    }
+}
+ 
 
 
 

@@ -256,6 +256,8 @@ private final class SubmitAction implements ActionListener {
       String disp = "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" + text + 
             "</font></p></div>";
       appendOutput(disp);
+      
+      input_area.setText("");
     }
    
 }       // end of inner class SubmitAction
