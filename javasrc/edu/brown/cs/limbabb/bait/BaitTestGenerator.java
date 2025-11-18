@@ -32,6 +32,11 @@ import org.w3c.dom.Element;
 import edu.brown.cs.bubbles.bale.BaleConstants;
 import edu.brown.cs.bubbles.bale.BaleFactory;
 import edu.brown.cs.bubbles.board.BoardLog;
+import edu.brown.cs.bubbles.bueno.BuenoFactory;
+import edu.brown.cs.bubbles.bueno.BuenoLocation;
+import edu.brown.cs.bubbles.bueno.BuenoProperties;
+import edu.brown.cs.bubbles.bueno.BuenoConstants.BuenoKey;
+import edu.brown.cs.bubbles.bueno.BuenoConstants.BuenoType;
 import edu.brown.cs.bubbles.bump.BumpClient;
 import edu.brown.cs.bubbles.bump.BumpLocation;
 import edu.brown.cs.ivy.file.IvyLog;
@@ -52,6 +57,7 @@ class BaitTestGenerator implements BaitConstants, BaitConstants.ResponseHandler
 private BumpLocation    bump_location;
 private String          context_contents;
 private String          insert_class;
+private BumpLocation    target_location;
 
 
 
@@ -64,6 +70,7 @@ private String          insert_class;
 BaitTestGenerator(BumpLocation loc,String incls)
 {
    bump_location = loc;
+   target_location = null;
    insert_class = incls;
    context_contents = null;
    getContents();
@@ -81,12 +88,11 @@ void process()
    String proj = bump_location.getProject();
    BumpClient bc = BumpClient.getBump();
    List<BumpLocation> clocs = bc.findTypes(proj,insert_class);
-   BumpLocation cloc = null;
    if (clocs != null) {
       for (BumpLocation bl : clocs) {
          String nm = bl.getSymbolName();
          if (nm.equals(insert_class)) {
-            cloc = bl;
+            target_location = bl;
             break;
           }
        }
@@ -112,8 +118,8 @@ void process()
        }
       xw.field("SOURCETYPE",what);
       xw.field("SOURCEFILE",bump_location.getFile());
-      if (cloc != null) {
-         xw.field("TARGETFILE",cloc.getFile());
+      if (target_location != null) {
+         xw.field("TARGETFILE",target_location.getFile());
        }
       else {
          xw.field("NEW",true);
@@ -133,6 +139,99 @@ void process()
 {
    IvyLog.logD("BAIT","Received tests: " + 
          IvyXml.convertXmlToString(rslt));
+   
+   if (target_location == null) {
+      // new class to create
+      BuenoFactory bf = BuenoFactory.getFactory();
+      
+      BuenoLocation cloc = bf.createLocation(bump_location.getProject(),
+            insert_class,null,false);
+      BuenoProperties bp = loadFileProperties(rslt);
+//    BuenoProperties bp = new BuenoProperties();
+//    bp.put(BuenoKey.KEY_NAME,insert_class);
+//    String ctxt = IvyXml.getTextElement(rslt,"TESTCODE");
+//    bp.put(BuenoKey.KEY_FULLTEXT,ctxt);
+      bf.createNew(BuenoType.NEW_CLASS,cloc,bp);
+    }
+   else {
+      // insert into existing class
+      for (Element impelt : IvyXml.children(rslt,"IMPORT")) {
+         addImport(impelt);
+       }
+      for (Element dclelt : IvyXml.children(rslt,"DECL")) {
+         addDeclaration(dclelt);
+       }
+    }
+}
+
+
+
+private BuenoProperties loadFileProperties(Element xml)
+{
+   BuenoProperties bp = new BuenoProperties();
+   
+// String ctxt = IvyXml.getTextElement(xml,"TESTCODE");
+// bp.put(BuenoKey.KEY_FULLTEXT,ctxt);
+   
+   int idx = insert_class.lastIndexOf(".");
+   String pnm = insert_class.substring(0,idx);
+   String cnm = insert_class.substring(idx+1);
+   bp.put(BuenoKey.KEY_PACKAGE,pnm);
+   bp.put(BuenoKey.KEY_NAME,cnm);
+   
+   Element topxml = IvyXml.getChild(xml,"TOP");
+   bp.put(BuenoKey.KEY_MODIFIERS,IvyXml.getAttrInt(topxml,"MODINT"));
+   String sup = IvyXml.getTextElement(xml,"SUPERCLASS");
+   if (sup != null) {
+      bp.addToArrayProperty(BuenoKey.KEY_EXTENDS,sup);
+    }
+   for (String s : IvyXml.getTextElements(xml,"IMPLEMENTS")) {
+      bp.addToArrayProperty(BuenoKey.KEY_IMPLEMENTS,s);
+    }
+   String jdoc = IvyXml.getTextElement(topxml,"JAVADOC");
+   if (jdoc != null) {
+      bp.put(BuenoKey.KEY_COMMENT,jdoc);
+      bp.put(BuenoKey.KEY_ADD_JAVADOC,true);
+    }
+   bp.put(BuenoKey.KEY_CONTENTS,IvyXml.getTextElement(topxml,"CONTENTS"));
+   
+   return bp;
+}
+
+
+private void addImport(Element impelt) 
+{
+   String typ = IvyXml.getText(impelt);
+   boolean isstatic = IvyXml.getAttrBool(impelt,"STATIC");
+   if (isstatic) typ = "static " + typ;
+   BumpClient bd = BumpClient.getBump();
+   Element edits = bd.fixImports(target_location.getProject(),
+         target_location.getFile(),null,0,0,typ);
+   if (edits != null) {
+      BaleFactory.getFactory().applyEdits(target_location.getFile(),edits);
+    }
+}
+
+
+private void addDeclaration(Element dclelt)
+{
+   BuenoProperties bp = new BuenoProperties();
+   String nm = IvyXml.getAttrString(dclelt,"NAME");
+   bp.put(BuenoKey.KEY_NAME,nm);
+   BuenoFactory bf = BuenoFactory.getFactory();
+   BuenoLocation cloc = bf.createLocation(bump_location.getProject(),
+         insert_class,null,true);
+   String ctxt = IvyXml.getTextElement(dclelt,"RAWCODE");
+   bp.put(BuenoKey.KEY_FULLTEXT,ctxt);
+   if (IvyXml.getAttrBool(dclelt,"FIELD")) {
+      bf.createNew(BuenoType.NEW_FIELD,cloc,bp);
+    }
+   else if (IvyXml.getAttrBool(dclelt,"INNERTYPE")) {
+      bf.createNew(BuenoType.NEW_INNER_CLASS,cloc,bp);
+    }
+   else {
+      bf.createNew(BuenoType.NEW_METHOD,cloc,bp);
+    }
 }
 
 
