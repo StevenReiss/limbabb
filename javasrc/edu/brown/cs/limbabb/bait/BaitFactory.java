@@ -212,8 +212,8 @@ private void initialCommands()
       sendLimbaMessage("CONTEXT",null,ctx);
     }
    
-   // issue dummy command to load context
-   issueCommand("QUERY",null,"Who are you?",null);
+   // issue dummy command to load context -- not a good idea while debugging limba
+// issueCommand("QUERY",null,"Who are you?",null);
 }
 
 
