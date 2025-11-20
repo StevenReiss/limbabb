@@ -25,6 +25,7 @@ package edu.brown.cs.limbabb.bait;
 import java.io.File;
 import java.util.List;
 
+import javax.swing.SwingUtilities;
 import javax.swing.text.BadLocationException;
 
 import org.w3c.dom.Element;
@@ -140,6 +141,12 @@ void process()
    IvyLog.logD("BAIT","Received tests: " + 
          IvyXml.convertXmlToString(rslt));
    
+   SwingUtilities.invokeLater(new TestInserter(rslt));
+}
+
+
+private void insertTests(Element rslt)
+{
    if (target_location == null) {
       // new class to create
       BuenoFactory bf = BuenoFactory.getFactory();
@@ -159,6 +166,21 @@ void process()
        }
     }
 }
+
+
+private class TestInserter implements Runnable {
+   
+   private Element result_element;
+   
+   TestInserter(Element e) {
+      result_element = e;
+    }
+   
+   @Override public void run() {
+      insertTests(result_element);
+    }
+   
+}       // end of Inner Class TestInserter
 
 
 
@@ -254,6 +276,9 @@ private void addDeclaration(Element dclelt)
     }
    else if (IvyXml.getAttrBool(dclelt,"INNERTYPE")) {
       loadTypeProps(dclelt,bp);
+      // need to test relevancy here
+      
+      
       bf.createNew(BuenoType.NEW_INNER_CLASS,cloc,bp);
     }
    else {
