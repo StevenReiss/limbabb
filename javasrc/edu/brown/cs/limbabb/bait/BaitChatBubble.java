@@ -151,6 +151,8 @@ JComponent getChatPanel()
    menu.add(new UseContextAction());
    menu.add(new ClearContextAction());
    
+   // if inside Java Code, provide option to extract that code into a method somewhere
+   
    menu.add(getFloatBubbleAction());
    
    menu.show(this,evt.getX(),evt.getY());
