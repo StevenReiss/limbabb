@@ -38,6 +38,7 @@ import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.bubbles.board.BoardProperties;
 import edu.brown.cs.bubbles.buda.BudaBubble;
 import edu.brown.cs.ivy.file.IvyFile;
+import edu.brown.cs.ivy.mint.MintConstants.CommandArgs;
 import edu.brown.cs.ivy.swing.SwingGridPanel;
 
 class BaitSetupBubble extends BudaBubble implements BaitConstants
@@ -213,7 +214,8 @@ private final class UpdateHandler implements ActionListener {
       if (model_chooser != null) {
          String mdl = model_chooser.getItemAt(model_chooser.getSelectedIndex());
          if (mdl != null && !mdl.isEmpty()) {
-            bf.sendLimbaMessage("SETMODEL",null,mdl);
+            CommandArgs args = new CommandArgs("MODEL",mdl);
+            bf.sendLimbaMessage("SETMODEL",args,null);
             bf.noteModelSet(); 
           }
        }

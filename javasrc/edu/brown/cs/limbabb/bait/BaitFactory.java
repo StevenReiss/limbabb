@@ -191,7 +191,7 @@ private void start()
    if (!server_running) return;
    BoardProperties bp = BoardProperties.getProperties("Bait");
    if (bp.getBoolean("Bait.ollama.usecontext")) {
-      issueCommand("PROJECT",null,"QUERY",null);
+      issueCommand("PROJECT",null,null,null,null);
     }
    initialCommands();
 }
@@ -205,11 +205,17 @@ private void initialCommands()
     }
    String sty = getProjectProperty("Bait.ollama.style");
    if (sty != null && !sty.isEmpty()) {
-      sendLimbaMessage("STYLE",null,sty);
+      try (IvyXmlWriter xw = new IvyXmlWriter()) {
+         xw.cdataElement("STYLE",sty);
+         sendLimbaMessage("STYLE",null,xw.toString());
+       }
     }
    String ctx = getProjectProperty("Bait.ollama.context");
    if (ctx != null && !ctx.isEmpty()) {
-      sendLimbaMessage("CONTEXT",null,ctx);
+      try (IvyXmlWriter xw = new IvyXmlWriter()) {
+         xw.cdataElement("CONTEXT",sty);
+         sendLimbaMessage("CONTEXT",null,xw.toString());
+       }
     }
    
    // issue dummy command to load context -- not a good idea while debugging limba
@@ -479,12 +485,16 @@ void noteModelSet()
 /*                                                                              */
 /********************************************************************************/
 
-void issueCommand(String cmd,CommandArgs args,String body,ResponseHandler hdlr)
+void issueCommand(String cmd,CommandArgs args,String elt,String body,ResponseHandler hdlr)
 {
-   IvyXmlWriter xw = new IvyXmlWriter();
-   xw.cdataElement("BODY",body);
-   String cnts = xw.toString();
-   xw.close();
+   String cnts = body;
+   if (elt != null) {
+      IvyXmlWriter xw = new IvyXmlWriter();
+      xw.cdataElement(elt,body);
+      cnts = xw.toString();
+      xw.close();
+    }
+   
    issueXmlCommand(cmd,args,cnts,hdlr);
 }
 
@@ -535,9 +545,6 @@ Element sendLimbaMessage(String cmd,CommandArgs args,String cnts)
        }
     }
    if (cnts != null) {
-      if (!cnts.startsWith("<")) {
-         cnts = "<BODY>" + cnts + "</BODY>";
-       }
       xw.xmlText(cnts);
     }
    xw.end("LIMBA");

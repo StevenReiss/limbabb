@@ -254,7 +254,8 @@ private final class SubmitAction implements ActionListener {
       if (use_context) {
          args = new CommandArgs("ID",history_id);
        }
-      BaitFactory.getFactory().issueCommand("QUERY",args,query,new Responder());  
+      BaitFactory.getFactory().issueCommand("QUERY",args,
+            "CONTENTS",query,new Responder());   
       String disp = "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" + text + 
             "</font></p></div>";
       appendOutput(disp);
