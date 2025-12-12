@@ -10,17 +10,17 @@
    <path id='setuppath'>
       <pathelement location='..' />
    </path>
-   <path id='faitpath'>
+   <path id='limbapath'>
       <pathelement location='.' />
    </path>
    <property name='setupfile' refid='setuppath' />
-   <property name='faitfile' refid='faitpath' />
+   <property name='limbafile' refid='limbapath' />
    <target name='setup' unless='setup.done'>
       <echo file='./build.properties' message="PRO=${setupfile}${line.separator}" />
-      <echo file='./build.properties' message='LIMBABB=${faitfile}${line.separator}' append='true' />
+      <echo file='./build.properties' message='LIMBABB=${limbafile}${line.separator}' append='true' />
       <mkdir dir='./java/edu/brown/cs/limbabb' />
       <property name='PRO' value='{setupfile}' />
-      <property name='LIMBABB' value='{faitfile}' />
+      <property name='LIMBABB' value='{limbafile}' />
    </target>
 
    <target name='all' depends='setup'>
