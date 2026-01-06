@@ -116,7 +116,7 @@ private static final class ResourceFilter implements BoardPluginFilter {
 
 public static void initialize(BudaRoot br)
 {
-// if (!BumpClient.getBump().getOptionBool("bubbles.useLimba")) return;
+   if (!BumpClient.getBump().getOptionBool("bubbles.useLimba")) return;
 
    BoardLog.logD("BAIT","USING LIMBA");
 
@@ -255,18 +255,6 @@ private boolean startLimba()
    
    args.add(IvyExecQuery.getJavaPath());
    
-   String dbgargs = bp.getProperty("Bait.jvm.args");
-   if (dbgargs != null && dbgargs.contains("###")) {
-      int port = (int) Math.random() * 1000 + 3000;
-      dbgargs = dbgargs.replace("###",Integer.toString(port));
-      BoardLog.logI("BAIT","Limba debug port " + port);
-    }
-   if (dbgargs != null) {
-      StringTokenizer tok = new StringTokenizer(dbgargs);
-      while (tok.hasMoreTokens()) {
-         args.add(tok.nextToken());
-       }
-    }
    File jarfile = IvyFile.getJarFile(BaitFactory.class);
    
    String xcp = bp.getProperty("Bait.limba.class.path");
@@ -741,7 +729,10 @@ private final class AskLimbaAction implements BudaConstants.ButtonListener {
    @Override public void buttonActivated(BudaBubbleArea bba,String id,Point pt) {
       BaitChatBubble bbl = new BaitChatBubble();
       BoardLog.logD("BAIT","Create chat bubble " + bbl);
-      bba.addBubble(bbl,BudaBubblePosition.USERPOS,pt.x,pt.y);
+      bba.addBubble(bbl,null,pt,BudaConstants.PLACEMENT_PREFER |
+      BudaConstants.PLACEMENT_MOVETO | BudaConstants.PLACEMENT_NEW);
+      bbl.setFixed(true);
+   // bba.addBubble(bbl,BudaBubblePosition.USERPOS,pt.x,pt.y);
     }
    
 }       // end of inner class AskLimbaAction

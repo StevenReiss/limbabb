@@ -194,6 +194,8 @@ private String formatText(String text)
       int idx3 = ntext.length();
       if (idx2 < 0) {
          idx2 = ntext.length();
+       }
+      else {
          idx3 = ntext.indexOf("\n",idx2);
        }
       
@@ -281,6 +283,7 @@ private final class Responder implements ResponseHandler {
        }
       
       text = formatText(text);
+   
       String disp = "<div align='left'><p><font color='black'>" + text +
            "</font></p></div>";
       appendOutput(disp);    
