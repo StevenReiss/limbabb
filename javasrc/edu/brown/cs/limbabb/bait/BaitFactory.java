@@ -395,7 +395,7 @@ private String getProjectProperty(String prop)
    BoardProperties bp = BoardProperties.getProperties("Bait");
    BoardSetup bs = BoardSetup.getSetup();
    String ws = bs.getDefaultWorkspace();
-   int idx = ws.lastIndexOf(".");
+   int idx = ws.lastIndexOf(File.pathSeparator);
    if (idx > 0) ws = ws.substring(idx+1);
    String p1 = bp.getProperty(prop + "." + ws);
    if (p1 != null) return p1;
