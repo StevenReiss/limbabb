@@ -203,14 +203,14 @@ private void initialCommands()
       Set<String> mdlist = getLlamaModels();
       if (mdlist.contains(mdl)) noteModelSet();
     }
-   String sty = getProjectProperty("Bait.ollama.style");
+   String sty = getProjectProperty("Bait.limba.style");
    if (sty != null && !sty.isEmpty()) {
       try (IvyXmlWriter xw = new IvyXmlWriter()) {
          xw.cdataElement("STYLE",sty);
          sendLimbaMessage("STYLE",null,xw.toString());
        }
     }
-   String ctx = getProjectProperty("Bait.ollama.context");
+   String ctx = getProjectProperty("Bait.limba.context");
    if (ctx != null && !ctx.isEmpty()) {
       try (IvyXmlWriter xw = new IvyXmlWriter()) {
          xw.cdataElement("CONTEXT",sty);
