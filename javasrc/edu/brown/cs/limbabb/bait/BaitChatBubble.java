@@ -45,6 +45,7 @@ import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.bubbles.buda.BudaBubble;
 import edu.brown.cs.ivy.mint.MintConstants.CommandArgs;
 import edu.brown.cs.ivy.swing.SwingGridPanel;
+import edu.brown.cs.ivy.swing.SwingWrappingEditorPane;
 import edu.brown.cs.ivy.xml.IvyXml;
 
 class BaitChatBubble extends BudaBubble implements BaitConstants
@@ -103,7 +104,7 @@ JComponent getChatPanel()
 {
    SwingGridPanel toppane = new SwingGridPanel();
    JLabel toplabel = new JLabel("Limba CHAT");
-   log_pane = new JEditorPane("text/html","");
+   log_pane = new SwingWrappingEditorPane("text/html","");
    log_pane.setEditable(false);
    BoardLog.logD("BAIT","Chat panel log pane " + log_pane.getContentType() + " " +
          log_pane.getEditorKit() + " " +
@@ -120,7 +121,7 @@ JComponent getChatPanel()
    JLabel botlabel = new JLabel("Enter Prompt");
    submit_button = new JButton("SUBMIT");
    submit_button.addActionListener(new SubmitAction());
-   input_area = new JEditorPane("text/plain","");
+   input_area = new SwingWrappingEditorPane("text/plain","");
    input_area.setEditable(true);
    JScrollPane inregion = new JScrollPane(input_area,
          JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
@@ -197,6 +198,11 @@ private String formatText(String text)
        }
       else {
          idx3 = ntext.indexOf("\n",idx2);
+         if (idx3 < 0) {
+            ntext += "\n";
+            idx3 = ntext.length();
+          }
+         
        }
       
       String quote = ntext.substring(idx1,idx2);
