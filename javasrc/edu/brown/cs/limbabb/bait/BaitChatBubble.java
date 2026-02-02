@@ -202,17 +202,18 @@ private String formatText(String text)
             ntext += "\n";
             idx3 = ntext.length();
           }
-         
        }
       
       String quote = ntext.substring(idx1,idx2);
       String pre = ntext.substring(0,idx0);
       String post = ntext.substring(idx3);
-      ntext = pre + "<pre><code>\n" + quote + "\n" + post;
+      ntext = pre + "<pre><code>\n" + quote + "\n</code></pre>" + post;
     }
    
    return ntext;
 }
+
+
 
 /********************************************************************************/
 /*                                                                              */

@@ -250,6 +250,7 @@ private boolean startLimba()
    IvyExec exec = null;
    File wd =  new File(bs.getDefaultWorkspace());
    File logf = new File(wd,"limba.log");
+   File transf = new File(wd,"limbatrans.html");
    
    List<String> args = new ArrayList<>();
    
@@ -284,7 +285,10 @@ private boolean startLimba()
 		  f1 = setup.getLibraryDirectory().getParentFile();
 		  File f2 = new File(f1,"dropins");
 		  File f3 = new File(f2,oelt);
-		  if (f3.exists()) elt = f3.getPath();
+		  if (f3.exists()) {
+                     f1 = f3;
+                     elt = f3.getPath();
+                   }
 		}
 	       BoardLog.logD("BAIT","Use class path limba element " + elt);
 	     }
@@ -302,6 +306,8 @@ private boolean startLimba()
    args.add(bs.getMintName());
    args.add("-L");
    args.add(logf.getPath());
+   args.add("-T");
+   args.add(transf.getPath());
    if (bp.getBoolean("Bait.limba.debug")) {
       args.add("-D");
     }
