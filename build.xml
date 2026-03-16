@@ -19,6 +19,7 @@
       <echo file='./build.properties' message="PRO=${setupfile}${line.separator}" />
       <echo file='./build.properties' message='LIMBABB=${limbafile}${line.separator}' append='true' />
       <mkdir dir='./java/edu/brown/cs/limbabb' />
+      <mkdir dir='./lib' />
       <property name='PRO' value='{setupfile}' />
       <property name='LIMBABB' value='{limbafile}' />
    </target>
