@@ -68,6 +68,7 @@ import java.util.StringTokenizer;
 import java.util.TreeSet;
 
 import javax.swing.AbstractAction;
+import javax.swing.JMenu;
 import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 
@@ -909,28 +910,21 @@ private final class BaitContexter implements BaleConstants.BaleContextListener {
       
       switch (cfg.getTokenType()) {
          case METHOD_DECL_ID :
-            menu.add(new GenerateTestMethodAction(cfg));
-            menu.add(new GenerateMethodAction(cfg));
-            menu.add(new JavadocMethodAction(cfg));
-            menu.add(new TestCaseMethodAction(cfg));
-//          String pnm = cfg.getEditor().getContentProject();
-//          Set<String> classes = new TreeSet<>();
-//          String mthd = cfg.getMethodName();
-//          String tcnm = BattFactory.getFactory().findTestClasses(pnm,
-//                null,mthd,classes);
-//          for (String c : classes) {
-//             menu.add(new TestCaseMethodAction(cfg,c,false));
-//           }
-//          if (!classes.contains(tcnm)) {
-//             menu.add(new TestCaseMethodAction(cfg,tcnm,true));
-//           }
+            JMenu jm = new JMenu("Smart Assistant...");
+            jm.add(new GenerateTestMethodAction(cfg));
+            jm.add(new GenerateMethodAction(cfg));
+            jm.add(new JavadocMethodAction(cfg));
+            jm.add(new TestCaseMethodAction(cfg));
+            menu.add(jm);
             break;
          case CLASS_DECL_ID :
          case TYPE_ID :
-            menu.add(new GenerateTestClassAction(cfg));
-            menu.add(new GenerateClassAction(cfg));
-            menu.add(new JavadocClassAction(cfg));
-            menu.add(new TestCaseClassAction(cfg));
+            jm = new JMenu("Smart Assistant...");
+            jm.add(new GenerateTestClassAction(cfg));
+            jm.add(new GenerateClassAction(cfg));
+            jm.add(new JavadocClassAction(cfg));
+            jm.add(new TestCaseClassAction(cfg));
+            menu.add(jm);
             break;
             
          default :
