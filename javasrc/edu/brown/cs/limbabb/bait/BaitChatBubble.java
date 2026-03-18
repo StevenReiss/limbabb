@@ -26,6 +26,8 @@ import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.swing.AbstractAction;
@@ -43,13 +45,16 @@ import org.w3c.dom.Element;
 
 import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.bubbles.buda.BudaBubble;
+import edu.brown.cs.bubbles.buda.BudaConstants;
+import edu.brown.cs.bubbles.buda.BudaXmlWriter;
 import edu.brown.cs.ivy.file.IvyFormat;
 import edu.brown.cs.ivy.mint.MintConstants.CommandArgs;
 import edu.brown.cs.ivy.swing.SwingGridPanel;
 import edu.brown.cs.ivy.swing.SwingWrappingEditorPane;
 import edu.brown.cs.ivy.xml.IvyXml;
 
-class BaitChatBubble extends BudaBubble implements BaitConstants
+class BaitChatBubble extends BudaBubble implements BaitConstants,
+      BudaConstants.BudaBubbleOutputer
 {
 
 
@@ -64,9 +69,11 @@ private JEditorPane     input_area;
 private JEditorPane     log_pane;
 private boolean         use_context;
 private String          history_id;
+private String          chat_name;
 
 private static final long serialVersionUID = 1;
 private static AtomicInteger history_counter = new AtomicInteger();
+private static SimpleDateFormat file_dateformat = new SimpleDateFormat("yyMMddHHmmss");
 
 
 /********************************************************************************/
@@ -82,9 +89,36 @@ BaitChatBubble()
    log_pane = null;
    use_context = true;
    history_id = "LIMBA_CHAT_" + history_counter.incrementAndGet();
+   String rid = Integer.toString((int) (Math.random() * 10000));
+   String fnm = "BirdChat_" + file_dateformat.format(new Date()) + "_" + rid + ".html";
+   chat_name = fnm;
    
    JComponent pnl = getChatPanel();
    setContentPane(pnl);
+}
+
+
+BaitChatBubble(String name,String cnts,String inp)
+{
+   this();
+   
+   if (name != null) {
+      chat_name = name;
+    }
+   if (cnts != null) {
+      try {
+         HTMLEditorKit kit = (HTMLEditorKit) log_pane.getEditorKit();
+         HTMLDocument doc = (HTMLDocument) log_pane.getDocument();
+         kit.insertHTML(doc,doc.getLength(),cnts,
+               0,0,null);
+       }
+      catch (Exception e) {
+         BoardLog.logE("BAIT","Problem reloading chat",e);
+       }
+    }
+   if (inp != null) {
+      input_area.setText(inp);
+    }
 }
 
 
@@ -92,6 +126,25 @@ BaitChatBubble()
 {
    // remove chat history
 }
+
+
+/********************************************************************************/
+/*                                                                              */
+/*      Configurator interface                                                  */
+/*                                                                              */
+/********************************************************************************/
+
+@Override public String getConfigurator()                       { return "BAIT"; }
+
+@Override public void outputXml(BudaXmlWriter xw) 
+{
+   xw.field("TYPE","CHAT");
+   xw.field("NAME",chat_name);
+   xw.cdataElement("TEXT",log_pane.getText());
+   xw.cdataElement("INPUT",input_area.getText());
+}
+
+String getChatName()                                            { return chat_name; }
 
 
 
@@ -260,7 +313,7 @@ private final class Responder implements ResponseHandler {
       text = IvyFormat.formatText(text);
    
       String disp = "<div align='left'><p><font color='black'>" + text +
-           "</font></p></div>";
+           "</font></p></div><hl>";
       appendOutput(disp);    
     }
    

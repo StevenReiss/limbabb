@@ -100,6 +100,7 @@ private static BaitFactory the_factory = new BaitFactory();
 public static void setup()
 {
    BoardPluginManager.installResources(BaitFactory.class,"limba",new ResourceFilter());
+   BudaRoot.addBubbleConfigurator("BAIT",new BaitConfigurator());
 }
 
 
