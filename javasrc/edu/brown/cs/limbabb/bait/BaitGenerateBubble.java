@@ -47,6 +47,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
 import javax.swing.event.ListSelectionEvent;
@@ -361,9 +362,13 @@ private void doGenerate()
 
 
 
-private class GenerateRequest implements BaitGenerateRequest {
+private class GenerateRequest implements BaitGenerateRequest, Runnable {
    
-   GenerateRequest() { }
+   private List<BussEntry> solution_set;
+   
+   GenerateRequest() { 
+      solution_set = null;
+    }
    
    @Override public void handleGenerateFailed() {
       status_field.setText("Nothing found from code search");
@@ -373,11 +378,17 @@ private class GenerateRequest implements BaitGenerateRequest {
    @Override public void handleGenerateSucceeded(List<BaitGenerateResult> result) { 
       status_field.setText("Search completed");
       BoardColors.setColors(status_field,"Bait.TestCaseSuccess");
-      List<BussEntry> sols = new ArrayList<>();
+      solution_set = new ArrayList<>();
       for (BaitGenerateResult bsr : result) {
-         sols.add(new BaitGenerateSolution(bsr,bump_location,source_bubble));    
+         solution_set.add(new BaitGenerateSolution(bsr,bump_location,source_bubble));    
        }
-      BudaBubble bb = BussFactory.getFactory().createBubbleStack(sols,450);
+      SwingUtilities.invokeLater(this);
+    }
+   
+   @Override public void handleGenerateInputs(List<BaitGenerateInput> result) { }
+   
+   @Override public void run() {
+      BudaBubble bb = BussFactory.getFactory().createBubbleStack(solution_set,450);
       BudaBubbleArea bba = BudaRoot.findBudaBubbleArea(BaitGenerateBubble.this);
       bba.addBubble(bb,BaitGenerateBubble.this,null,
             BudaConstants.PLACEMENT_LOGICAL|
@@ -386,8 +397,6 @@ private class GenerateRequest implements BaitGenerateRequest {
             new BudaDefaultPort(),bb,new BudaDefaultPort());
       bba.addLink(bbl);
     }
-   
-   @Override public void handleGenerateInputs(List<BaitGenerateInput> result) { }
    
 }	// end of inner class SearchRequest
 
@@ -433,7 +442,7 @@ private void scanForPrompt()
             for (int j = ln-1; j >= 0; --j) {
                Character c1 = text.charAt(j);
                if (Character.isWhitespace(c1) || c1 == '*' || c1 == '/') continue;
-               text = text.delete(j,ln);
+               text = text.delete(j+1,ln);
                break;
              }
 	    inareacmmt = false;

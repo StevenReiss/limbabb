@@ -23,9 +23,13 @@
 package edu.brown.cs.limbabb.bait;
 
 import java.awt.Dimension;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -34,10 +38,12 @@ import javax.swing.AbstractAction;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JEditorPane;
+import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.HTMLEditorKit;
 
@@ -50,6 +56,7 @@ import edu.brown.cs.bubbles.buda.BudaXmlWriter;
 import edu.brown.cs.ivy.file.IvyFormat;
 import edu.brown.cs.ivy.mint.MintConstants.CommandArgs;
 import edu.brown.cs.ivy.swing.SwingGridPanel;
+import edu.brown.cs.ivy.swing.SwingText;
 import edu.brown.cs.ivy.swing.SwingWrappingEditorPane;
 import edu.brown.cs.ivy.xml.IvyXml;
 
@@ -70,6 +77,7 @@ private JEditorPane     log_pane;
 private boolean         use_context;
 private String          history_id;
 private String          chat_name;
+private boolean         auto_scroll;
 
 private static final long serialVersionUID = 1;
 private static AtomicInteger history_counter = new AtomicInteger();
@@ -92,6 +100,7 @@ BaitChatBubble()
    String rid = Integer.toString((int) (Math.random() * 10000));
    String fnm = "BirdChat_" + file_dateformat.format(new Date()) + "_" + rid + ".html";
    chat_name = fnm;
+   auto_scroll = true;
    
    JComponent pnl = getChatPanel();
    setContentPane(pnl);
@@ -111,6 +120,16 @@ BaitChatBubble(String name,String cnts,String inp)
          HTMLDocument doc = (HTMLDocument) log_pane.getDocument();
          kit.insertHTML(doc,doc.getLength(),cnts,
                0,0,null);
+         if (auto_scroll) {
+            Rectangle r = SwingText.modelToView2D(log_pane,doc.getLength()-1);
+            if (r != null) {
+               Dimension sz = log_pane.getSize();
+               r.x = 0;
+               r.y += 20;
+               if (r.y + r.height > sz.height) r.y = sz.height;
+               log_pane.scrollRectToVisible(r);
+             }
+          }
        }
       catch (Exception e) {
          BoardLog.logE("BAIT","Problem reloading chat",e);
@@ -205,6 +224,8 @@ JComponent getChatPanel()
    
    menu.add(new UseContextAction());
    menu.add(new ClearContextAction());
+   menu.add(new SaveAction());
+   menu.add(new PrintAction());
    
    // if inside Java Code, provide option to extract that code into a method somewhere
    
@@ -227,6 +248,7 @@ private void appendOutput(String s)
       HTMLDocument doc = (HTMLDocument) log_pane.getDocument();
       kit.insertHTML(doc,doc.getLength(),s,
             0,0,null);
+      
     }
    catch (Exception e) { 
       BoardLog.logE("BAIT","Problem appending output",e);
@@ -294,6 +316,57 @@ private final class SubmitAction implements ActionListener {
     }
    
 }       // end of inner class SubmitAction
+
+
+
+private final class SaveAction extends AbstractAction {
+
+   SaveAction() {
+      super("Save Transcript");
+    }
+   
+   @Override public void actionPerformed(ActionEvent evt) {
+      JFileChooser chooser = new JFileChooser();
+      chooser.setDialogTitle("Choose html file to save transcript in");
+      chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+      chooser.setFileFilter(new FileNameExtensionFilter("HTML File",
+            "html","htm"));
+      int retval = chooser.showSaveDialog(BaitChatBubble.this);
+      if (retval == JFileChooser.APPROVE_OPTION){
+         File f = chooser.getSelectedFile();
+         String cnts = log_pane.getText();
+         // might need to prepend <html> and append \n
+         try (FileWriter fw = new FileWriter(f)) {
+            fw.write(cnts);
+          }
+         catch (IOException e) {
+            BoardLog.logE("BAIT","Save to file " + f + " failed",e);
+          }
+       }
+    }
+   
+}       // end of inner class SaveAction
+
+
+private final class PrintAction extends AbstractAction {
+   
+   private static final long serialVersionUID = 1L;
+   
+   PrintAction() {
+      super("Print Transcript");
+    }
+   
+   @Override public void actionPerformed(ActionEvent evt) {
+      try {
+         log_pane.print();
+       }
+      catch (java.awt.print.PrinterException e) {
+         BoardLog.logE("BAIT","Problem printing transcript",e);
+       }
+    }
+   
+}       // end of inner class PrintAction
+
 
 
 private final class Responder implements ResponseHandler {
