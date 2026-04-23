@@ -378,8 +378,8 @@ private final class Responder implements ResponseHandler {
        }
       String text = IvyXml.getTextElement(rslt,"RESPONSE");
       if (text == null) {
-         BoardLog.logE("BAIT","Problem with response result: " +
-               IvyXml.convertXmlToString(rslt));
+         BoardLog.logE("BAIT","Problem with chat response result: " +
+               IvyXml.convertXmlToString(xml));
          text = "???";
        }
       
