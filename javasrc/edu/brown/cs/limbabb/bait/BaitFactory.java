@@ -634,7 +634,19 @@ private boolean createGenerateBubble(BaleContextConfig cfg,boolean mthd,boolean 
 }
 
 
-private boolean createJavadocHandler(BaleContextConfig cfg)
+private boolean createJavadocHandler(BaleContextConfig cfg,boolean forclass,String types)
+{
+   if (!forclass) {
+      return createMethodJavadocHandler(cfg);
+    }
+   else {
+      return createClassJavadocHandler(cfg,types);
+    }
+}
+
+
+
+private boolean createMethodJavadocHandler(BaleContextConfig cfg)
 {
    String mnm = cfg.getMethodName();
    if (mnm == null) return false;
@@ -651,7 +663,29 @@ private boolean createJavadocHandler(BaleContextConfig cfg)
        }
     }
    if (loc == null) return false;
-   BaitJavaDocer bjd = new BaitJavaDocer(loc);
+   BaitJavaDocer bjd = new BaitJavaDocer(loc,null);
+   bjd.process(); 
+   return true;
+}
+
+
+private boolean createClassJavadocHandler(BaleContextConfig cfg,String types)
+{
+   String cnm = cfg.getFullName();
+   if (cnm == null) return false;
+   List<BumpLocation> locs = BumpClient.getBump().findAllClasses(cnm);
+   if (locs == null || locs.size() == 0) return false;
+   BumpLocation loc = null;
+   for (BumpLocation bloc : locs) {
+      int st = bloc.getDefinitionOffset();
+      int ed = bloc.getDefinitionEndOffset();
+      if (cfg.getDocumentOffset() >= st && cfg.getDocumentOffset() <= ed) {
+         loc = bloc;
+         break;
+       }
+    }
+   if (loc == null) return false;
+   BaitJavaDocer bjd = new BaitJavaDocer(loc,types);
    bjd.process(); 
    return true;
 }
@@ -839,7 +873,7 @@ private class JavadocMethodAction extends AbstractAction {
     }
    
    @Override public void actionPerformed(ActionEvent e) {
-      createJavadocHandler(start_config);
+      createJavadocHandler(start_config,false,null);
     }
    
 }       // end of inner class JavadocMethodAction
@@ -849,6 +883,7 @@ private class JavadocMethodAction extends AbstractAction {
 private class JavadocClassAction extends AbstractAction {
    
    private transient BaleContextConfig start_config;
+   
    private static final long serialVersionUID = 1;
    
    JavadocClassAction(BaleContextConfig cfg) {
@@ -857,7 +892,25 @@ private class JavadocClassAction extends AbstractAction {
     }
    
    @Override public void actionPerformed(ActionEvent e) {
-      createJavadocHandler(start_config);
+      createJavadocHandler(start_config,true,"*");
+    }
+
+}       // end of inner class JavadocClassAction
+
+
+private class JavadocClassMethodsAction extends AbstractAction {
+   
+   private transient BaleContextConfig start_config;
+   
+   private static final long serialVersionUID = 1;
+   
+   JavadocClassMethodsAction(BaleContextConfig cfg) {
+      super("Generate JavaDoc for Class Methods");
+      start_config = cfg;
+    }
+   
+   @Override public void actionPerformed(ActionEvent e) {
+      createJavadocHandler(start_config,true,"PUBLIC,PROTECTED");
     }
 
 }       // end of inner class JavadocClassAction
@@ -925,6 +978,7 @@ private final class BaitContexter implements BaleConstants.BaleContextListener {
             jm.add(new GenerateTestClassAction(cfg));
             jm.add(new GenerateClassAction(cfg));
             jm.add(new JavadocClassAction(cfg));
+            jm.add(new JavadocClassMethodsAction(cfg));
             jm.add(new TestCaseClassAction(cfg));
             menu.add(jm);
             break;

@@ -52,6 +52,7 @@ private String prior_javadoc;
 private String method_contents;
 private int prior_start;
 private int prior_end;
+private String method_types;
 
 
 
@@ -61,13 +62,14 @@ private int prior_end;
 /*                                                                              */
 /********************************************************************************/
 
-BaitJavaDocer(BumpLocation loc)
+BaitJavaDocer(BumpLocation loc,String types)
 {
    bump_location = loc;
    prior_javadoc = null;
    method_contents = null;
    prior_start = -1;
    prior_end = -1;
+   method_types = types;
    scanMethod();
 }
 
@@ -109,7 +111,8 @@ void process()
          what = "FIELD";
          break;
     }
-   CommandArgs args = new CommandArgs("TYPE",what,"USECONTEXT",true);
+   CommandArgs args = new CommandArgs("WHAT",what,"USECONTEXT",true);
+   if (method_types != null) args.put("TYPES",method_types);
    BaitFactory bf = BaitFactory.getFactory();
    bf.issueXmlCommand("FINDJDOC",args,body,this);
 }
@@ -117,9 +120,19 @@ void process()
 
 @Override public void handleResponse(Element rslt)
 {
-   String jdoc = IvyXml.getTextElement(rslt,"JDOC"); 
-   if (jdoc != null && !jdoc.isEmpty()) {
-      replaceJavaDoc(jdoc);
+   if (method_types == null) {
+      // handle single method and single javadoc
+      String jdoc = IvyXml.getTextElement(rslt,"JDOC"); 
+      if (jdoc != null && !jdoc.isEmpty()) {
+         replaceJavaDoc(jdoc);
+       }
+    }
+   else if (method_types.equals("*")) {
+      // handle single class
+      BoardLog.logD("BAIT","Handle class javadoc");
+    }
+   else {
+      BoardLog.logD("BAIT","Handle multiple method javadoc");
     }
 }
 
