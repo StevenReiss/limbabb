@@ -138,7 +138,8 @@ public static void initialize(BudaRoot br)
 
 private void setupCallbacks() 
 {
-   BudaRoot.registerMenuButton("Bubble.Smart Asst.Set Limba Properties",new SetupLimbaAction());
+   BudaRoot.registerMenuButton("Bubble.Smart Asst.Set Limba Properties",
+         new SetupLimbaAction());
    BaleFactory.getFactory().addContextListener(new BaitContexter());
 }
 
@@ -679,7 +680,7 @@ private boolean createTestCasesHandler(BaleContextConfig cfg,boolean method)
    IvyLog.logD("LIMBA","Create test cases for " + loc + " into " + cnm);
    if (loc == null) return false;
    
-   BaitTestGenerator bjd = new BaitTestGenerator(loc,cnm); 
+   BaitTestGenerator bjd = new BaitTestGenerator(loc,cnm,cfg.getEditor());  
    bjd.process(); 
    
    return true;

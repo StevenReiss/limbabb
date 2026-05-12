@@ -40,10 +40,14 @@ import javax.swing.JComponent;
 import javax.swing.JEditorPane;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
+import javax.swing.JTextField;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Document;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.HTMLEditorKit;
 
@@ -53,6 +57,7 @@ import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.bubbles.buda.BudaBubble;
 import edu.brown.cs.bubbles.buda.BudaConstants;
 import edu.brown.cs.bubbles.buda.BudaXmlWriter;
+import edu.brown.cs.ivy.file.IvyFile;
 import edu.brown.cs.ivy.file.IvyFormat;
 import edu.brown.cs.ivy.mint.MintConstants.CommandArgs;
 import edu.brown.cs.ivy.swing.SwingGridPanel;
@@ -78,6 +83,7 @@ private boolean         use_context;
 private String          history_id;
 private String          chat_name;
 private boolean         auto_scroll;
+private String          last_file;
 
 private static final long serialVersionUID = 1;
 private static AtomicInteger history_counter = new AtomicInteger();
@@ -101,6 +107,7 @@ BaitChatBubble()
    String fnm = "BirdChat_" + file_dateformat.format(new Date()) + "_" + rid + ".html";
    chat_name = fnm;
    auto_scroll = true;
+   last_file = null;
    
    JComponent pnl = getChatPanel();
    setContentPane(pnl);
@@ -224,6 +231,7 @@ JComponent getChatPanel()
    
    menu.add(new UseContextAction());
    menu.add(new ClearContextAction());
+   menu.add(new ImportAction());
    menu.add(new SaveAction());
    menu.add(new PrintAction());
    
@@ -241,6 +249,25 @@ JComponent getChatPanel()
 /*                                                                              */
 /********************************************************************************/
 
+void appendQuery(String text) 
+{
+   String text1 = IvyFormat.formatText(text);
+   String disp = "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" + 
+         text1 + "</font></p></div>";
+   appendOutput(disp);
+}
+
+
+void appendResponse(String text)
+{
+   String text1 = IvyFormat.formatText(text);
+   
+   String disp = "<div align='left'><p><font color='black'>" + text1 +
+         "</font></p></div><hl>";
+   appendOutput(disp);    
+}
+
+
 private void appendOutput(String s)
 {
    try {
@@ -248,7 +275,6 @@ private void appendOutput(String s)
       HTMLDocument doc = (HTMLDocument) log_pane.getDocument();
       kit.insertHTML(doc,doc.getLength(),s,
             0,0,null);
-      
     }
    catch (Exception e) { 
       BoardLog.logE("BAIT","Problem appending output",e);
@@ -307,10 +333,7 @@ private final class SubmitAction implements ActionListener {
        }
       BaitFactory.getFactory().issueCommand("QUERY",args,
             "CONTENTS",query,new Responder());  
-      String text1 = IvyFormat.formatText(text);
-      String disp = "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" + text1 + 
-            "</font></p></div>";
-      appendOutput(disp);
+      appendQuery(text);
       
       input_area.setText("");
     }
@@ -368,6 +391,40 @@ private final class PrintAction extends AbstractAction {
 }       // end of inner class PrintAction
 
 
+private final class ImportAction extends AbstractAction {
+   
+   private static final long serialVersionUID = 1;
+   
+   ImportAction() {
+      super("Import File");
+    }
+   
+   @Override public void actionPerformed(ActionEvent evt) {
+      SwingGridPanel pnl = new SwingGridPanel();
+      pnl.addBannerLabel("Import from File");
+      JTextField lnm = pnl.addFileField("File",last_file,
+            JFileChooser.FILES_ONLY,null,null);
+      int fg = JOptionPane.showOptionDialog(BaitChatBubble.this,pnl,
+            "Import From File",
+            JOptionPane.OK_CANCEL_OPTION,
+            JOptionPane.PLAIN_MESSAGE,
+            null,null,null);
+      if (fg != JOptionPane.OK_OPTION) return;
+      String fnm = lnm.getText();
+      last_file = fnm;
+      try {
+         String txt = IvyFile.loadFile(new File(fnm));
+         Document doc = input_area.getDocument();
+         String dtxt = doc.getText(0,doc.getLength());
+         if (!dtxt.endsWith("\n")) txt = "\n" + txt;
+         doc.insertString(doc.getLength(),txt,null);
+       }
+      catch (BadLocationException e) { }
+      catch (IOException e) { }
+    }
+}
+
+
 
 private final class Responder implements ResponseHandler {
    
@@ -383,11 +440,7 @@ private final class Responder implements ResponseHandler {
          text = "???";
        }
       
-      text = IvyFormat.formatText(text);
-   
-      String disp = "<div align='left'><p><font color='black'>" + text +
-           "</font></p></div><hl>";
-      appendOutput(disp);    
+      appendResponse(text);
     }
    
 }       // end of inner class ResponseAction

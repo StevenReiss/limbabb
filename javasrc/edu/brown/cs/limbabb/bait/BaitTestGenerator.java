@@ -22,9 +22,11 @@
 
 package edu.brown.cs.limbabb.bait;
 
+import java.awt.Component;
 import java.io.File;
 import java.util.List;
 
+import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import javax.swing.text.BadLocationException;
 
@@ -33,6 +35,10 @@ import org.w3c.dom.Element;
 import edu.brown.cs.bubbles.bale.BaleConstants;
 import edu.brown.cs.bubbles.bale.BaleFactory;
 import edu.brown.cs.bubbles.board.BoardLog;
+import edu.brown.cs.bubbles.buda.BudaBubble;
+import edu.brown.cs.bubbles.buda.BudaBubbleArea;
+import edu.brown.cs.bubbles.buda.BudaConstants;
+import edu.brown.cs.bubbles.buda.BudaRoot;
 import edu.brown.cs.bubbles.bueno.BuenoFactory;
 import edu.brown.cs.bubbles.bueno.BuenoLocation;
 import edu.brown.cs.bubbles.bueno.BuenoProperties;
@@ -59,6 +65,7 @@ private BumpLocation    bump_location;
 private String          context_contents;
 private String          insert_class;
 private BumpLocation    target_location;
+private Component       near_bubble;
 
 
 
@@ -67,13 +74,15 @@ private BumpLocation    target_location;
 /*      Constructors                                                            */
 /*                                                                              */
 /********************************************************************************/
-
-BaitTestGenerator(BumpLocation loc,String incls)
+ 
+BaitTestGenerator(BumpLocation loc,String incls,Component at)
 {
    bump_location = loc;
    target_location = null;
    insert_class = incls;
    context_contents = null;
+   near_bubble = at; 
+   
    getContents();
 }
 
@@ -147,6 +156,7 @@ void process()
 
 private void insertTests(Element rslt)
 {
+   String loc = null;
    if (target_location == null) {
       // new class to create
       BuenoFactory bf = BuenoFactory.getFactory();
@@ -155,6 +165,8 @@ private void insertTests(Element rslt)
             insert_class,null,false);
       BuenoProperties bp = loadFileProperties(rslt);
       bf.createNew(BuenoType.NEW_CLASS,cloc,bp);
+      
+      loc = "New class " + insert_class;
     }
    else {
       // insert into existing class
@@ -164,6 +176,28 @@ private void insertTests(Element rslt)
       for (Element dclelt : IvyXml.children(rslt,"DECL")) {
          addDeclaration(dclelt);
        }
+      
+      loc = "Class " + target_location.getSymbolName();
+    }
+   
+   boolean telluser = true;
+   if (target_location == null && near_bubble != null) {
+      BaleFactory bf = BaleFactory.getFactory();
+      BudaBubble bb = bf.createClassBubble(bump_location.getProject(),insert_class);
+      BudaBubbleArea bba = BudaRoot.findBudaBubbleArea(near_bubble);
+      if (bb != null && bba != null) {
+         bba.addBubble(bb,near_bubble,null,
+               BudaConstants.PLACEMENT_MOVETO | BudaConstants.PLACEMENT_NEW |
+               BudaConstants.PLACEMENT_PREFER);
+         telluser = false;
+       }
+    }
+   
+   if (telluser) {
+      JOptionPane.showMessageDialog(null,
+            "Test cases generated into " + loc,
+            "Smart Assistant Response",
+         JOptionPane.INFORMATION_MESSAGE);
     }
 }
 
