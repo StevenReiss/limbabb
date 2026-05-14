@@ -107,7 +107,9 @@ void process()
          what = "FIELD";
          break;
     }
-   CommandArgs args = new CommandArgs("WHAT",what,"USECONTEXT",true);
+   CommandArgs args = new CommandArgs("WHAT",what,
+         "USECONTEXT",true,
+         "NAME",bump_location.getSymbolName());
    if (method_types != null) args.put("TYPES",method_types);
    BaitFactory bf = BaitFactory.getFactory();
    bf.issueXmlCommand("FINDJDOC",args,body,this);
