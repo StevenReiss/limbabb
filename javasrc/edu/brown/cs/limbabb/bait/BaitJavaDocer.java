@@ -26,6 +26,7 @@ import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
 
+import javax.swing.SwingUtilities;
 import javax.swing.text.BadLocationException;
 
 import org.w3c.dom.Element;
@@ -122,41 +123,9 @@ void process()
    for (Element jelt : IvyXml.children(rslt,"JDOC")) {
       todo.add(0,jelt);
     }
+   if (todo.isEmpty()) return;
    
-   if (method_types == null) {
-      // handle single method and single javadoc
-      if (todo.size() == 1) {
-         String jdoc = IvyXml.getTextElement(rslt,"JDOC"); 
-         if (jdoc != null && !jdoc.isEmpty()) {
-            replaceJavaDoc(jdoc,item_scan);
-          }
-       }
-    }
-   else if (method_types.equals("*")) {
-      // handle single class
-      if (todo.size() == 1) {
-         String jdoc = IvyXml.getTextElement(rslt,"JDOC"); 
-         if (jdoc != null && !jdoc.isEmpty()) {
-            replaceJavaDoc(jdoc,item_scan);
-          }
-       }
-    }
-   else {
-      BumpClient bc = BumpClient.getBump();
-      for (Element jelt : todo) {
-         String name = IvyXml.getAttrString(jelt,"NAME");
-         String jdoc = IvyXml.getText(jelt);
-         if (jdoc == null || jdoc.isEmpty()) continue;
-         List<BumpLocation> locs = bc.findMethod(bump_location.getProject(),name,false);
-         for (BumpLocation loc : locs) {
-            if (loc.getFile() != bump_location.getFile()) continue;
-            ItemScanner lscn = new ItemScanner(loc);
-            // check for location already done?
-            replaceJavaDoc(jdoc,lscn);
-          }
-       }
-      BoardLog.logD("BAIT","Handle multiple method javadoc");
-    }
+   SwingUtilities.invokeLater(new JavaDocInserter(todo));
 }
 
 
@@ -168,12 +137,13 @@ void process()
 
 void replaceJavaDoc(String jdoc,ItemScanner scan)
 {
+   if (!jdoc.endsWith("\n")) jdoc += "\n";
    // might need to get bump location again and then scan it again
    File f = bump_location.getFile();
    String proj = bump_location.getProject();
    BaleConstants.BaleFileOverview bfo = BaleFactory.getFactory().
          getFileOverview(proj,f);
-   int start = bump_location.getDefinitionOffset();
+   int start = scan.getStartOffset();
    
    try {
       if (scan.getPriorStart() < 0 || scan.getPriorEnd() < 0) {
@@ -187,6 +157,66 @@ void replaceJavaDoc(String jdoc,ItemScanner scan)
     }
    catch (BadLocationException e) {
       BoardLog.logE("BAIT","Problem inserting javadoc",e);
+    }
+}
+
+
+private class JavaDocInserter implements Runnable {
+   
+   private List<Element> work_list;
+   
+   JavaDocInserter(List<Element> todo) {
+      work_list = todo;
+    }
+   
+   @Override public void run() {
+      if (method_types == null) {
+         // handle single method and single javadoc
+         if (work_list.size() == 1) {
+            Element rslt = work_list.get(0);
+            String jdoc = IvyXml.getTextElement(rslt,"JDOC"); 
+            if (jdoc != null && !jdoc.isEmpty()) {
+               replaceJavaDoc(jdoc,item_scan);
+             }
+          }
+       }
+      else if (method_types.equals("*")) {
+         // handle single class
+         if (work_list.size() == 1) {
+            Element rslt = work_list.get(0);
+            String jdoc = IvyXml.getTextElement(rslt,"JDOC"); 
+            if (jdoc != null && !jdoc.isEmpty()) {
+               replaceJavaDoc(jdoc,item_scan);
+             }
+          }
+       }
+      else {
+         BumpClient bc = BumpClient.getBump();
+         for (Element jelt : work_list) {
+            String name = IvyXml.getAttrString(jelt,"NAME");
+            String jdoc = IvyXml.getText(jelt);
+            if (jdoc == null || jdoc.isEmpty()) continue;
+            List<BumpLocation> locs = bc.findMethod(bump_location.getProject(),
+                  name,false);
+            if (locs.isEmpty()) {
+               int idx0 = name.indexOf("(");
+               if (idx0 < 0) idx0 = name.length();
+               int idx1 = name.lastIndexOf(".",idx0);
+               if (idx1 > 0) {
+                  String name1 = name.substring(idx1+1);
+                  locs = bc.findMethod(bump_location.getProject(),name1,false);
+                }
+             }
+            for (BumpLocation loc : locs) {
+               if (!loc.getFile().equals(bump_location.getFile())) continue;
+               ItemScanner lscn = new ItemScanner(loc);
+               // check for location already done?
+               replaceJavaDoc(jdoc,lscn);
+               break;
+             }
+          }
+         BoardLog.logD("BAIT","Handle multiple method javadoc");
+       }
     }
 }
 
@@ -221,6 +251,9 @@ private static final class ItemScanner {
    int getPriorStart()                          { return prior_start; }
    int getPriorEnd()                            { return prior_end; }
    String getContents()                         { return item_contents; }
+   int getStartOffset() {
+      return bump_location.getDefinitionOffset();
+    }
    
    private void scanMethod() {
       File f = bump_location.getFile();
