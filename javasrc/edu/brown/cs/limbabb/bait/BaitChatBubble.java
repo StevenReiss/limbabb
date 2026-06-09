@@ -22,32 +22,15 @@
 
 package edu.brown.cs.limbabb.bait;
 
-import java.awt.Dimension;
-import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.swing.AbstractAction;
-import javax.swing.JButton;
-import javax.swing.JComponent;
 import javax.swing.JEditorPane;
-import javax.swing.JFileChooser;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
-import javax.swing.JScrollPane;
-import javax.swing.JSplitPane;
-import javax.swing.JTextField;
-import javax.swing.filechooser.FileNameExtensionFilter;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.Document;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.HTMLEditorKit;
 
@@ -57,18 +40,15 @@ import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.bubbles.buda.BudaBubble;
 import edu.brown.cs.bubbles.buda.BudaConstants;
 import edu.brown.cs.bubbles.buda.BudaXmlWriter;
-import edu.brown.cs.ivy.file.IvyFile;
 import edu.brown.cs.ivy.file.IvyFormat;
 import edu.brown.cs.ivy.mint.MintConstants.CommandArgs;
-import edu.brown.cs.ivy.swing.SwingGridPanel;
-import edu.brown.cs.ivy.swing.SwingText;
-import edu.brown.cs.ivy.swing.SwingWrappingEditorPane;
 import edu.brown.cs.ivy.xml.IvyXml;
+import edu.brown.cs.limbabb.bait.BaitConstants.BaitInputListener;
 
 class BaitChatBubble extends BudaBubble implements BaitConstants,
-      BudaConstants.BudaBubbleOutputer
+      BudaConstants.BudaBubbleOutputer, BaitInputListener
 {
-
+ 
 
 /********************************************************************************/
 /*                                                                              */
@@ -76,14 +56,12 @@ class BaitChatBubble extends BudaBubble implements BaitConstants,
 /*                                                                              */
 /********************************************************************************/
 
-private JButton         submit_button;
+private BaitTerminalPanel terminal_panel;
 private JEditorPane     input_area;
 private JEditorPane     log_pane;
 private boolean         use_context;
-private String          history_id;
+private String          history_id;  
 private String          chat_name;
-private boolean         auto_scroll;
-private String          last_file;
 
 private static final long serialVersionUID = 1;
 private static AtomicInteger history_counter = new AtomicInteger();
@@ -98,7 +76,6 @@ private static SimpleDateFormat file_dateformat = new SimpleDateFormat("yyMMddHH
 
 BaitChatBubble()
 {
-   submit_button = null;
    input_area = null;
    log_pane = null;
    use_context = true;
@@ -106,11 +83,11 @@ BaitChatBubble()
    String rid = Integer.toString((int) (Math.random() * 10000));
    String fnm = "BirdChat_" + file_dateformat.format(new Date()) + "_" + rid + ".html";
    chat_name = fnm;
-   auto_scroll = true;
-   last_file = null;
    
-   JComponent pnl = getChatPanel();
-   setContentPane(pnl);
+   terminal_panel = new BaitTerminalPanel();
+   terminal_panel.addInputListener(this);
+   
+   setContentPane(terminal_panel.getComponent());
 }
 
 
@@ -121,30 +98,8 @@ BaitChatBubble(String name,String cnts,String inp)
    if (name != null) {
       chat_name = name;
     }
-   if (cnts != null) {
-      try {
-         HTMLEditorKit kit = (HTMLEditorKit) log_pane.getEditorKit();
-         HTMLDocument doc = (HTMLDocument) log_pane.getDocument();
-         kit.insertHTML(doc,doc.getLength(),cnts,
-               0,0,null);
-         if (auto_scroll) {
-            Rectangle r = SwingText.modelToView2D(log_pane,doc.getLength()-1);
-            if (r != null) {
-               Dimension sz = log_pane.getSize();
-               r.x = 0;
-               r.y += 20;
-               if (r.y + r.height > sz.height) r.y = sz.height;
-               log_pane.scrollRectToVisible(r);
-             }
-          }
-       }
-      catch (Exception e) {
-         BoardLog.logE("BAIT","Problem reloading chat",e);
-       }
-    }
-   if (inp != null) {
-      input_area.setText(inp);
-    }
+   
+   terminal_panel.initializeContents(cnts,inp); 
 }
 
 
@@ -173,52 +128,6 @@ BaitChatBubble(String name,String cnts,String inp)
 String getChatName()                                            { return chat_name; }
 
 
-
-/********************************************************************************/
-/*                                                                              */
-/*      Setup the internals                                                     */
-/*                                                                              */
-/********************************************************************************/
-
-JComponent getChatPanel()
-{
-   SwingGridPanel toppane = new SwingGridPanel();
-   JLabel toplabel = new JLabel("Limba CHAT");
-   log_pane = new SwingWrappingEditorPane("text/html","");
-   log_pane.setEditable(false);
-   BoardLog.logD("BAIT","Chat panel log pane " + log_pane.getContentType() + " " +
-         log_pane.getEditorKit() + " " +
-         log_pane.getEditorKitForContentType("text/html"));
-   
-   JScrollPane outregion = new JScrollPane(log_pane,
-         JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
-         JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-   toppane.addGBComponent(toplabel,0,0,1,1,10,0);
-   toppane.addGBComponent(outregion,0,1,0,1,10,10);
-   toppane.setPreferredSize(new Dimension(400,300));
-   
-   SwingGridPanel botpane = new SwingGridPanel();
-   JLabel botlabel = new JLabel("Enter Prompt");
-   submit_button = new JButton("SUBMIT");
-   submit_button.addActionListener(new SubmitAction());
-   input_area = new SwingWrappingEditorPane("text/plain","");
-   input_area.setEditable(true);
-   JScrollPane inregion = new JScrollPane(input_area,
-         JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
-         JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-   botpane.addGBComponent(botlabel,0,0,1,1,10,0);
-   botpane.addGBComponent(submit_button,1,0,1,1,0,0);
-   botpane.addGBComponent(inregion,0,1,0,1,10,10);
-   botpane.setPreferredSize(new Dimension(400,100));
-   
-   JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT,
-         true,toppane,botpane);
-   
-   return split;
-}
-
-
-
 /********************************************************************************/
 /*                                                                              */
 /*      Menu methods                                                            */
@@ -231,9 +140,8 @@ JComponent getChatPanel()
    
    menu.add(new UseContextAction());
    menu.add(new ClearContextAction());
-   menu.add(new ImportAction());
-   menu.add(new SaveAction());
-   menu.add(new PrintAction());
+   
+   terminal_panel.addPopupButtons(evt,menu);
    
    // if inside Java Code, provide option to extract that code into a method somewhere
    
@@ -320,110 +228,21 @@ private final class ClearContextAction extends AbstractAction {
 }       // end of inner class ClearContextAction
 
 
-
-private final class SubmitAction implements ActionListener {
+ 
+@Override public void handleInput(String text)
+{
+   if (text == null || text.isBlank()) return;
    
-   @Override public void actionPerformed(ActionEvent evt) {
-      String text = input_area.getText();
-      if (text.isBlank()) return;
-      String query = text;
-      CommandArgs args = null;
-      if (use_context) {
-         args = new CommandArgs("ID",history_id);
-       }
-      BaitFactory.getFactory().issueCommand("QUERY",args,
-            "CONTENTS",query,new Responder());  
-      appendQuery(text);
-      
-      input_area.setText("");
+   String query = text;
+   
+   CommandArgs args = null;
+   if (use_context) {
+      args = new CommandArgs("ID",history_id);
     }
    
-}       // end of inner class SubmitAction
-
-
-
-private final class SaveAction extends AbstractAction {
-
-   SaveAction() {
-      super("Save Transcript");
-    }
-   
-   @Override public void actionPerformed(ActionEvent evt) {
-      JFileChooser chooser = new JFileChooser();
-      chooser.setDialogTitle("Choose html file to save transcript in");
-      chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-      chooser.setFileFilter(new FileNameExtensionFilter("HTML File",
-            "html","htm"));
-      int retval = chooser.showSaveDialog(BaitChatBubble.this);
-      if (retval == JFileChooser.APPROVE_OPTION){
-         File f = chooser.getSelectedFile();
-         String cnts = log_pane.getText();
-         // might need to prepend <html> and append \n
-         try (FileWriter fw = new FileWriter(f)) {
-            fw.write(cnts);
-          }
-         catch (IOException e) {
-            BoardLog.logE("BAIT","Save to file " + f + " failed",e);
-          }
-       }
-    }
-   
-}       // end of inner class SaveAction
-
-
-private final class PrintAction extends AbstractAction {
-   
-   private static final long serialVersionUID = 1L;
-   
-   PrintAction() {
-      super("Print Transcript");
-    }
-   
-   @Override public void actionPerformed(ActionEvent evt) {
-      try {
-         log_pane.print();
-       }
-      catch (java.awt.print.PrinterException e) {
-         BoardLog.logE("BAIT","Problem printing transcript",e);
-       }
-    }
-   
-}       // end of inner class PrintAction
-
-
-private final class ImportAction extends AbstractAction {
-   
-   private static final long serialVersionUID = 1;
-   
-   ImportAction() {
-      super("Import File");
-    }
-   
-   @Override public void actionPerformed(ActionEvent evt) {
-      SwingGridPanel pnl = new SwingGridPanel();
-      pnl.addBannerLabel("Import from File");
-      JTextField lnm = pnl.addFileField("File",last_file,
-            JFileChooser.FILES_ONLY,null,null);
-      int fg = JOptionPane.showOptionDialog(BaitChatBubble.this,pnl,
-            "Import From File",
-            JOptionPane.OK_CANCEL_OPTION,
-            JOptionPane.PLAIN_MESSAGE,
-            null,null,null);
-      if (fg != JOptionPane.OK_OPTION) return;
-      String fnm = lnm.getText();
-      last_file = fnm;
-      try {
-         String txt = IvyFile.loadFile(new File(fnm));
-         Document doc = input_area.getDocument();
-         String dtxt = doc.getText(0,doc.getLength());
-         if (!dtxt.endsWith("\n")) txt = "\n" + txt;
-         doc.insertString(doc.getLength(),txt,null);
-       }
-      catch (BadLocationException e) { }
-      catch (IOException e) { }
-    }
+   BaitFactory.getFactory().issueCommand("QUERY",args,
+         "CONTENTS",query,new Responder());  
 }
-
 
 
 private final class Responder implements ResponseHandler {

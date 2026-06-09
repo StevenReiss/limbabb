@@ -22,6 +22,7 @@
 package edu.brown.cs.limbabb.bait;
 
 import java.awt.image.BufferedImage;
+import java.util.EventListener;
 import java.util.List;
 
 import org.w3c.dom.Element;
@@ -63,6 +64,13 @@ interface BaitGenerateRequest {
    void handleGenerateSucceeded(List<BaitGenerateResult> result);
    void handleGenerateInputs(List<BaitGenerateInput> result);
 }
+
+
+interface BaitInputListener extends EventListener {
+
+   void handleInput(String text);
+   
+}       // end of inner interface BaitInputListener
 
 
 
