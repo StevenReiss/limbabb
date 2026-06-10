@@ -146,6 +146,11 @@ void removeInputListener(BaitInputListener il)
    input_listeners.remove(il);
 }
 
+void enableInput(boolean fg)
+{
+   submit_button.setEnabled(fg);
+}
+
 
 /********************************************************************************/
 /*                                                                              */

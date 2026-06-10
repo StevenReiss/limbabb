@@ -1,8 +1,8 @@
 /********************************************************************************/
 /*                                                                              */
-/*              BaitChatBubble.java                                             */
+/*              BaitClaudeBubble.java                                           */
 /*                                                                              */
-/*      Bubbles for chatting the LIMBA                                          */
+/*      Terminal to talk to Claude Code instance                                */
 /*                                                                              */
 /********************************************************************************/
 /*      Copyright 2011 Brown University -- Steven P. Reiss                    */
@@ -22,29 +22,22 @@
 
 package edu.brown.cs.limbabb.bait;
 
-import java.awt.event.ActionEvent;
 import java.awt.event.MouseEvent;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.swing.AbstractAction;
 import javax.swing.JPopupMenu;
 
-import org.w3c.dom.Element;
-
-import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.bubbles.buda.BudaBubble;
 import edu.brown.cs.bubbles.buda.BudaConstants;
 import edu.brown.cs.bubbles.buda.BudaXmlWriter;
-import edu.brown.cs.ivy.mint.MintConstants.CommandArgs;
-import edu.brown.cs.ivy.xml.IvyXml;
+import edu.brown.cs.ivy.exec.IvyExec;
 import edu.brown.cs.limbabb.bait.BaitConstants.BaitInputListener;
 
-class BaitChatBubble extends BudaBubble implements BaitConstants,
+class BaitClaudeBubble extends BudaBubble implements BaitConstants, 
       BudaConstants.BudaBubbleOutputer, BaitInputListener
 {
- 
+
 
 /********************************************************************************/
 /*                                                                              */
@@ -53,13 +46,12 @@ class BaitChatBubble extends BudaBubble implements BaitConstants,
 /********************************************************************************/
 
 private BaitTerminalPanel terminal_panel;
-private boolean         use_context;
-private String          history_id;  
-private String          chat_name;
+private String chat_name;
+private IvyExec claude_process;
 
 private static final long serialVersionUID = 1;
-private static AtomicInteger history_counter = new AtomicInteger();
 private static SimpleDateFormat file_dateformat = new SimpleDateFormat("yyMMddHHmmss");
+
 
 
 /********************************************************************************/
@@ -68,22 +60,23 @@ private static SimpleDateFormat file_dateformat = new SimpleDateFormat("yyMMddHH
 /*                                                                              */
 /********************************************************************************/
 
-BaitChatBubble()
+BaitClaudeBubble()
 {
-   use_context = true;
-   history_id = "LIMBA_CHAT_" + history_counter.incrementAndGet();
-   String rid = Integer.toString((int) (Math.random() * 10000));
-   String fnm = "BirdChat_" + file_dateformat.format(new Date()) + "_" + rid + ".html";
+   String fnm = "BirdClaude_" + file_dateformat.format(new Date()) + ".html";
    chat_name = fnm;
+   claude_process = null;
    
+   
+   // should create a grid panel with buttons for common operations
    terminal_panel = new BaitTerminalPanel();
    terminal_panel.addInputListener(this);
+   terminal_panel.enableInput(false);
    
-   setContentPane(terminal_panel.getComponent());
+   // start up claude if we have a model -- enable input if successful
 }
 
 
-BaitChatBubble(String name,String cnts,String inp)
+BaitClaudeBubble(String name,String cnts,String inp)
 {
    this();
    
@@ -95,10 +88,6 @@ BaitChatBubble(String name,String cnts,String inp)
 }
 
 
-@Override protected void localDispose()
-{
-   // remove chat history
-}
 
 
 /********************************************************************************/
@@ -111,13 +100,14 @@ BaitChatBubble(String name,String cnts,String inp)
 
 @Override public void outputXml(BudaXmlWriter xw) 
 {
-   xw.field("TYPE","CHAT");
+   xw.field("TYPE","CLAUDE");
    xw.field("NAME",chat_name);
    xw.cdataElement("TEXT",terminal_panel.getText());
    xw.cdataElement("INPUT",terminal_panel.getInputText());
 }
 
 String getChatName()                                            { return chat_name; }
+
 
 
 /********************************************************************************/
@@ -130,12 +120,7 @@ String getChatName()                                            { return chat_na
 {
    JPopupMenu menu = new JPopupMenu();
    
-   menu.add(new UseContextAction());
-   menu.add(new ClearContextAction());
-   
    terminal_panel.addPopupButtons(evt,menu);
-   
-   // if inside Java Code, provide option to extract that code into a method somewhere
    
    menu.add(getFloatBubbleAction());
    
@@ -146,83 +131,24 @@ String getChatName()                                            { return chat_na
 
 /********************************************************************************/
 /*                                                                              */
-/*      Action handlers                                                         */
+/*      Abstract Method Implementations                                         */
 /*                                                                              */
 /********************************************************************************/
 
-private final class UseContextAction extends AbstractAction { 
-   
-   private static final long serialVersionUID = 1;
-   
-   UseContextAction() {
-      super(use_context ? "Don't Use History" : "Use History");
-    }
-   
-   @Override public void actionPerformed(ActionEvent e) {
-      use_context = !use_context;
-    }
-   
-}       // end of inner class UseContextAction
-
-
-private final class ClearContextAction extends AbstractAction { 
-   
-   private static final long serialVersionUID = 1;
-   
-   ClearContextAction() {
-      super("Clear History");
-    }
-   
-   @Override public void actionPerformed(ActionEvent e) {
-      BaitFactory bf = BaitFactory.getFactory();
-      bf.sendLimbaMessage("CLEAR",new CommandArgs("ID",history_id),null);
-    }
-   
-}       // end of inner class ClearContextAction
-
-
- 
 @Override public void handleInput(String text)
 {
-   if (text == null || text.isBlank()) return;
+   if (claude_process == null) return;
+   // send text to CLAUDE CODEfg);
    
-   String query = text;
-   
-   CommandArgs args = null;
-   if (use_context) {
-      args = new CommandArgs("ID",history_id);
-    }
-   
-   BaitFactory.getFactory().issueCommand("QUERY",args,
-         "CONTENTS",query,new Responder());  
+   // method body goes here
 }
 
 
-private final class Responder implements ResponseHandler {
-   
-   @Override public void handleResponse(Element xml) { 
-      Element rslt = xml;
-      if (!IvyXml.isElement(xml,"RESULT")) {
-         rslt = IvyXml.getChild(xml,"RESULT");
-       }
-      String text = IvyXml.getTextElement(rslt,"RESPONSE");
-      if (text == null) {
-         BoardLog.logE("BAIT","Problem with chat response result: " +
-               IvyXml.convertXmlToString(xml));
-         text = "???";
-       }
-      
-      terminal_panel.appendResponse(text);
-    }
-   
-}       // end of inner class ResponseAction
 
-
-
-}       // end of class BaitChatBubble
+}       // end of class BaitClaudeBubble
 
 
 
 
-/* end of BaitChatBubble.java */
+/* end of BaitClaudeBubble.java */
 
