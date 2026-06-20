@@ -692,6 +692,7 @@ private boolean createClassJavadocHandler(BaleContextConfig cfg,String types)
 }
 
 
+
 private boolean createTestCasesHandler(BaleContextConfig cfg,boolean method)
 {
    BumpLocation loc = null;
