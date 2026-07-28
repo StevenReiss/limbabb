@@ -184,7 +184,7 @@ void setupPanel()
          log_pane.getEditorKit() + " " +
          log_pane.getEditorKitForContentType("text/html"));
    
-   JScrollPane outregion = new JScrollPane(toppane,
+   JScrollPane outregion = new JScrollPane(log_pane,
          JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
          JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
    toppane.addGBComponent(toplabel,0,0,1,1,10,0);
