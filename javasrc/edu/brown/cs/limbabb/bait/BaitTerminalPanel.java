@@ -26,6 +26,8 @@ import java.awt.Dimension;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.FileWriter;
@@ -42,6 +44,7 @@ import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
@@ -49,6 +52,7 @@ import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.HTMLEditorKit;
 
 import edu.brown.cs.bubbles.board.BoardLog;
+import edu.brown.cs.bubbles.board.BoardProperties;
 import edu.brown.cs.ivy.file.IvyFile;
 import edu.brown.cs.ivy.file.IvyFormat;
 import edu.brown.cs.ivy.swing.SwingEventListenerList;
@@ -94,7 +98,8 @@ BaitTerminalPanel()
    log_pane = null;
    query_color = "blue";
    response_color = "black";
-   auto_scroll = true;
+   BoardProperties bp = BoardProperties.getProperties("Bait");
+   auto_scroll = bp.getBoolean("Bait.panel.auto.scroll",true);
    
    setupPanel();
 }
@@ -208,6 +213,8 @@ void setupPanel()
    JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT,
          true,toppane,botpane);
    
+   log_pane.addFocusListener(new PanelFocusHandler());
+   
    terminal_window = split;
 }
 
@@ -242,20 +249,7 @@ void initializeContents(String cnts,String inp)
 {
    if (cnts != null) {
       try {
-         HTMLEditorKit kit = (HTMLEditorKit) log_pane.getEditorKit();
-         HTMLDocument doc = (HTMLDocument) log_pane.getDocument();
-         kit.insertHTML(doc,doc.getLength(),cnts,
-               0,0,null);
-         if (auto_scroll) {
-            Rectangle r = SwingText.modelToView2D(log_pane,doc.getLength()-1);
-            if (r != null) {
-               Dimension sz = log_pane.getSize();
-               r.x = 0;
-               r.y += 20;
-               if (r.y + r.height > sz.height) r.y = sz.height;
-               log_pane.scrollRectToVisible(r);
-             }
-          }
+         appendOutput(cnts);
        }
       catch (Exception e) {
          BoardLog.logE("BAIT","Problem reloading chat",e);
@@ -275,12 +269,55 @@ private void appendOutput(String s)
       HTMLDocument doc = (HTMLDocument) log_pane.getDocument();
       kit.insertHTML(doc,doc.getLength(),s,
             0,0,null);
+      
+      if (auto_scroll) {
+         SwingUtilities.invokeLater(new Scroller());
+       }
+      
     }
    catch (Exception e) { 
       BoardLog.logE("BAIT","Problem appending output",e);
     }
 }
 
+
+
+private final class Scroller implements Runnable {
+   
+   @Override public void run() {
+      HTMLDocument doc = (HTMLDocument) log_pane.getDocument();
+      log_pane.validate();
+      
+      int len = doc.getLength();
+      try {
+         Rectangle r = SwingText.modelToView2D(log_pane,len-1);
+         if (r != null) {
+            Dimension sz = log_pane.getPreferredSize();
+            r.x = 0;
+            r.y += 20;
+            if (r.y + r.height > sz.height) r.y = sz.height;
+            log_pane.scrollRectToVisible(r);
+          }
+       }
+      catch (BadLocationException ex) {
+         BoardLog.logE("BAIT","Problem scrolling to end of limba panel: " + ex);
+       }
+    }
+   
+}       // end of inner class Scroller
+
+
+private final class PanelFocusHandler extends FocusAdapter implements Runnable {
+   
+   @Override public void focusGained(FocusEvent e) {
+      SwingUtilities.invokeLater(this); 
+    }
+   
+   @Override public void run() {
+      input_area.requestFocusInWindow();
+    }
+
+}       // end of inner class PanelFocusListener
 
 
 /********************************************************************************/
