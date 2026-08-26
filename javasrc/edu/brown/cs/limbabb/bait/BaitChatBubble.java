@@ -37,6 +37,7 @@ import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.bubbles.buda.BudaBubble;
 import edu.brown.cs.bubbles.buda.BudaConstants;
 import edu.brown.cs.bubbles.buda.BudaXmlWriter;
+import edu.brown.cs.ivy.file.IvyFormat;
 import edu.brown.cs.ivy.mint.MintConstants.CommandArgs;
 import edu.brown.cs.ivy.xml.IvyXml;
 import edu.brown.cs.limbabb.bait.BaitConstants.BaitInputListener;
@@ -212,7 +213,9 @@ private final class Responder implements ResponseHandler {
          text = "???";
        }
       
-      terminal_panel.appendResponse(text);
+      String text1 = IvyFormat.formatText(text);
+      
+      terminal_panel.appendResponse(text1);
     }
    
 }       // end of inner class ResponseAction
