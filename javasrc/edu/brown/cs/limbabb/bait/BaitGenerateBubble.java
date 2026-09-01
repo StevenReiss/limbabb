@@ -66,6 +66,7 @@ import edu.brown.cs.bubbles.batt.BattConstants.BattNewTestPanel;
 import edu.brown.cs.bubbles.batt.BattConstants.BattTest;
 import edu.brown.cs.bubbles.board.BoardColors;
 import edu.brown.cs.bubbles.board.BoardLog;
+import edu.brown.cs.bubbles.board.BoardProperties;
 import edu.brown.cs.bubbles.board.BoardSetup;
 import edu.brown.cs.bubbles.buda.BudaBubble;
 import edu.brown.cs.bubbles.buda.BudaBubbleArea;
@@ -166,6 +167,10 @@ private JPanel setupPanel(boolean usetests)
       DataCallback cb2 = new DataCallback();
       data_button.addActionListener(cb2);
       pnl.addRawComponent(null,data_button);
+    }
+   BoardProperties bp = BoardProperties.getProperties("Bait");
+   if (bp.getBoolean("Bait.ask.safe.code")) {
+      pnl.addBoolean("Generate Safe Code",false,null);
     }
    
    if (usetests) {

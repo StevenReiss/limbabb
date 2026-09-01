@@ -135,7 +135,7 @@ String getChatName()                                            { return chat_na
 /*                                                                              */
 /********************************************************************************/
 
-@Override public void handleInput(String text)
+@Override public void handleInput(String text,String what)
 {
    if (claude_process == null) return;
    // send text to CLAUDE CODEfg);

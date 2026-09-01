@@ -121,6 +121,8 @@ BaitChatBubble(String name,String cnts,String inp)
 String getChatName()                                            { return chat_name; }
 
 
+
+
 /********************************************************************************/
 /*                                                                              */
 /*      Menu methods                                                            */
@@ -165,7 +167,6 @@ private final class UseContextAction extends AbstractAction {
    
 }       // end of inner class UseContextAction
 
-
 private final class ClearContextAction extends AbstractAction { 
    
    private static final long serialVersionUID = 1;
@@ -183,7 +184,7 @@ private final class ClearContextAction extends AbstractAction {
 
 
  
-@Override public void handleInput(String text)
+@Override public void handleInput(String text,String what)
 {
    if (text == null || text.isBlank()) return;
    
@@ -194,7 +195,12 @@ private final class ClearContextAction extends AbstractAction {
       args = new CommandArgs("ID",history_id);
     }
    
-   BaitFactory.getFactory().issueCommand("QUERY",args,
+   String cmd = "QUERY";
+   if (what != null && what.contains("SAFE")) {
+      cmd = "SAFEQUERY";
+    }
+
+   BaitFactory.getFactory().issueCommand(cmd,args,
          "CONTENTS",query,new Responder());  
 }
 

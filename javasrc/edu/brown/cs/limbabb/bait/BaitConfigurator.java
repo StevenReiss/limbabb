@@ -44,7 +44,7 @@ class BaitConfigurator implements BaitConstants, BudaConstants.BubbleConfigurato
    Element cnt = IvyXml.getChild(xml,"CONTENT");
    String typ = IvyXml.getAttrString(cnt,"TYPE");
    
-   BudaBubble bb = null;
+   BaitChatBubble bb = null;
    if (typ.equals("CHAT")) {
       String name = IvyXml.getAttrString(cnt,"NAME");
       String cnts = IvyXml.getTextElement(cnt,"TEXT");

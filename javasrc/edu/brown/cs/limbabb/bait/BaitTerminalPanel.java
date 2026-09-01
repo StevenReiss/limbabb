@@ -45,6 +45,8 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+import javax.swing.event.CaretEvent;
+import javax.swing.event.CaretListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
@@ -72,6 +74,7 @@ class BaitTerminalPanel implements BaitConstants
 
 private JComponent      terminal_window;
 private JButton         submit_button;
+private JButton         safe_button;
 private JEditorPane     input_area;
 private JEditorPane     log_pane;
 private String          last_file;
@@ -94,6 +97,7 @@ BaitTerminalPanel()
    last_file = null;
    terminal_window = null;
    submit_button = null;
+   safe_button = null;
    input_area = null;
    log_pane = null;
    query_color = "blue";
@@ -154,6 +158,7 @@ void removeInputListener(BaitInputListener il)
 void enableInput(boolean fg)
 {
    submit_button.setEnabled(fg);
+   if (safe_button != null) safe_button.setEnabled(fg);
 }
 
 
@@ -200,8 +205,15 @@ void setupPanel()
    JLabel botlabel = new JLabel("Enter Prompt");
    submit_button = new JButton("SUBMIT");
    submit_button.addActionListener(new SubmitAction());
+   safe_button = null;
+   BoardProperties bp = BoardProperties.getProperties("Bait");
+   if (bp.getBoolean("Bait.ask.safe.code")) {
+      safe_button = new JButton("SAFECODE");
+      safe_button.addActionListener(new SubmitAction());
+    }
    input_area = new SwingWrappingEditorPane("text/plain","");
    input_area.setEditable(true);
+   input_area.addCaretListener(new InputListener());
    JScrollPane inregion = new JScrollPane(input_area,
          JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
          JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
@@ -216,6 +228,8 @@ void setupPanel()
    log_pane.addFocusListener(new PanelFocusHandler());
    
    terminal_window = split;
+   
+   updateButtons();
 }
 
 
@@ -225,6 +239,16 @@ void setupPanel()
 /*      Teminal update methods                                                  */
 /*                                                                              */
 /********************************************************************************/
+
+void updateButtons()
+{
+   boolean fg = (input_area != null && !input_area.getText().isBlank());
+   submit_button.setEnabled(fg);
+   if (safe_button != null) {
+      safe_button.setEnabled(fg);
+    }
+}
+
 
 void appendQuery(String text) 
 {
@@ -320,6 +344,16 @@ private final class PanelFocusHandler extends FocusAdapter implements Runnable {
 }       // end of inner class PanelFocusListener
 
 
+private final class InputListener implements CaretListener { 
+   
+   @Override public void caretUpdate(CaretEvent evt) {
+      updateButtons();
+    }
+   
+}       // end of inner class InputListener
+
+
+
 /********************************************************************************/
 /*                                                                              */
 /*      Action handlers                                                         */
@@ -332,9 +366,11 @@ private final class SubmitAction implements ActionListener {
       String text = input_area.getText();
       if (text.isBlank()) return;
       appendQuery(text);
+      JButton btn = (JButton) evt.getSource();
+      String what = btn.getText();
       
       for (BaitInputListener al : input_listeners) {
-         al.handleInput(text);
+         al.handleInput(text,what);
        }
       
       input_area.setText("");

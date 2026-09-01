@@ -68,7 +68,7 @@ interface BaitGenerateRequest {
 
 interface BaitInputListener extends EventListener {
 
-   void handleInput(String text);
+   void handleInput(String text,String btn);
    
 }       // end of inner interface BaitInputListener
 
